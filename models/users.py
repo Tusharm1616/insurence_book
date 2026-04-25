@@ -16,6 +16,8 @@ class User(Base):
     full_name = Column(String)
     hashed_password = Column(String)
     role = Column(String, default=UserRole.AGENT)
+    phone = Column(String, nullable=True)
+    license_no = Column(String, nullable=True)
     
     # Relationships
     managed_customers = relationship("Customer", back_populates="agent", foreign_keys="[Customer.agent_id]")

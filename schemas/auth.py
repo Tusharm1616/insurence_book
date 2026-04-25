@@ -20,3 +20,32 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
     role: Optional[str] = None
+
+# New Agent JSON schemas
+class AgentLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class AgentRegister(BaseModel):
+    name: str
+    email: EmailStr
+    phone: str
+    license_no: str
+    password: str
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class AgentResponse(BaseModel):
+    id: int
+    name: str
+    email: EmailStr
+    license_no: Optional[str] = None
+
+class LoginResponse(BaseModel):
+    token: str
+    agent: AgentResponse
+
+class RegisterResponse(BaseModel):
+    message: str
+    agent: AgentResponse

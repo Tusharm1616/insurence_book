@@ -33,6 +33,7 @@ async def startup_event():
     await init_db()
 
 app.include_router(auth.router)
+app.include_router(auth.api_auth_router)
 app.include_router(customers.router)
 app.include_router(policies.router)
 
