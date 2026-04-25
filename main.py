@@ -9,7 +9,7 @@ from utils.auth import verify_password, get_password_hash, create_access_token, 
 from models.users import User, UserRole
 
 from fastapi.middleware.cors import CORSMiddleware
-from routes import auth, customers
+from routes import auth, customers, policies
 
 # Create database tables
 import asyncio
@@ -34,6 +34,7 @@ async def startup_event():
 
 app.include_router(auth.router)
 app.include_router(customers.router)
+app.include_router(policies.router)
 
 @app.get("/")
 def read_root():
