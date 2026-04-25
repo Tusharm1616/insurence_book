@@ -3,8 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
   static const Color primary = Color(0xFF22C55E);
-  static const Color accent = Color(0xFF60A5FA);
-  static const Color background = Color(0xFFF4F6F8);
+  static const Color secondary = Color(0xFF16A34A);
+  static const Color background = Color(0xFFF0F4F8);
   static const Color cardBackground = Color(0xFFFFFFFF);
   static const Color success = Color(0xFF2ECC71);
   static const Color warning = Color(0xFFF39C12);
@@ -23,7 +23,7 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
         primary: AppColors.primary,
-        secondary: AppColors.accent,
+        secondary: AppColors.secondary,
         surface: AppColors.cardBackground,
       ),
       textTheme: GoogleFonts.interTextTheme().copyWith(

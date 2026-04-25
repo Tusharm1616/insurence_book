@@ -134,9 +134,9 @@ class DashboardScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(20),
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.accent.withValues(alpha: 0.1),
+        color: AppColors.secondary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
+        border: Border.all(color: AppColors.secondary.withValues(alpha: 0.2)),
       ),
       child: Row(children: [
         Container(

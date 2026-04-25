@@ -9,6 +9,8 @@ class AuthState {
 
   AuthState({this.user, this.isLoading = false, this.error});
 
+  bool get isAuthenticated => user != null;
+
   AuthState copyWith({UserProfile? user, bool? isLoading, String? error}) {
     return AuthState(
       user: user ?? this.user,
@@ -22,28 +24,66 @@ class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() => AuthState();
 
-  Future<void> login(String username, String password) async {
+  Future<void> login(String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final response = await apiService.dio.post('/auth/login', data: {
-        'username': username,
+      final response = await apiService.dio.post('/api/auth/login', data: {
+        'email': email,
         'password': password,
       });
       
-      final token = response.data['access_token'];
+      final token = response.data['token'];
       await apiService.saveToken(token);
       
-      // For now, mock the user profile fetch or get from JWT
+      final agentData = response.data['agent'];
       final user = UserProfile(
-        id: 1, 
-        username: username, 
-        fullName: 'Agent Name', 
+        id: agentData['id'], 
+        username: agentData['email'], 
+        fullName: agentData['name'], 
         role: 'agent'
       );
       
       state = state.copyWith(user: user, isLoading: false);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: 'Login failed');
+      state = state.copyWith(isLoading: false, error: 'Invalid email or password');
+    }
+  }
+
+  Future<bool> register({
+    required String name,
+    required String email,
+    required String phone,
+    required String licenseNo,
+    required String password,
+  }) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await apiService.dio.post('/api/auth/register', data: {
+        'name': name,
+        'email': email,
+        'phone': phone,
+        'license_no': licenseNo,
+        'password': password,
+      });
+      state = state.copyWith(isLoading: false);
+      return true;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: 'Registration failed or email already exists');
+      return false;
+    }
+  }
+
+  Future<bool> forgotPassword(String email) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await apiService.dio.post('/api/auth/forgot-password', data: {
+        'email': email,
+      });
+      state = state.copyWith(isLoading: false);
+      return true;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: 'Failed to send reset link');
+      return false;
     }
   }
 

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme.dart';
+import 'screens/auth/splash_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/auth/register_screen.dart';
+import 'screens/auth/forgot_password_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/customer_list_screen.dart';
 import 'screens/create_customer_screen.dart';
@@ -32,8 +36,12 @@ class InsureBookApp extends StatelessWidget {
       title: 'InsureBook',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      initialRoute: '/dashboard',
+      initialRoute: '/',
       routes: {
+        '/':                 (context) => const SplashScreen(),
+        '/login':            (context) => const LoginScreen(),
+        '/register':         (context) => const RegisterScreen(),
+        '/forgot-password':  (context) => const ForgotPasswordScreen(),
         '/dashboard':        (context) => const MainNavigationScreen(),
         '/customers':        (context) => const CustomerListScreen(),
         '/create_customer':  (context) => const CreateCustomerScreen(),
