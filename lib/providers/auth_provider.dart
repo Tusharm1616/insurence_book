@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
+import 'package:dio/dio.dart';
 
 class AuthState {
   final UserProfile? user;
@@ -45,7 +46,17 @@ class AuthNotifier extends Notifier<AuthState> {
       
       state = state.copyWith(user: user, isLoading: false);
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: 'Invalid email or password');
+      String errorMessage = 'Login failed';
+      if (e is DioException) {
+        if (e.response != null) {
+          errorMessage = e.response?.data['detail'] ?? 'Login failed (Server Error: ${e.response?.statusCode})';
+        } else {
+          errorMessage = 'Network Error: Make sure backend is running';
+        }
+      } else {
+        errorMessage = e.toString();
+      }
+      state = state.copyWith(isLoading: false, error: errorMessage);
     }
   }
 
@@ -68,7 +79,17 @@ class AuthNotifier extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: 'Registration failed or email already exists');
+      String errorMessage = 'Registration failed';
+      if (e is DioException) {
+        if (e.response != null) {
+          errorMessage = e.response?.data['detail'] ?? 'Registration failed (Server Error: ${e.response?.statusCode})';
+        } else {
+          errorMessage = 'Network Error: Make sure backend is running';
+        }
+      } else {
+        errorMessage = e.toString();
+      }
+      state = state.copyWith(isLoading: false, error: errorMessage);
       return false;
     }
   }
