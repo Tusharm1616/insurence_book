@@ -2,6 +2,16 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
+
+# Fix passlib bug with bcrypt 4.1+
+import bcrypt
+try:
+    _ = bcrypt.__about__
+except AttributeError:
+    class _About:
+        __version__ = getattr(bcrypt, "__version__", "4.0.0")
+    bcrypt.__about__ = _About
+
 from passlib.context import CryptContext
 
 # Security configuration
