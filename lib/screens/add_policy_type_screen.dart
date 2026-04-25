@@ -163,24 +163,33 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
       },
     );
 
-    await ref.read(policyProvider.notifier).addPolicy(policy);
+    try {
+      await ref.read(policyProvider.notifier).addPolicy(policy);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Row(children: [
-        const Icon(Icons.check_circle, color: Colors.white),
-        const SizedBox(width: 8),
-        Text('${widget.policyType} saved successfully!'),
-      ]),
-      backgroundColor: Colors.green,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Row(children: [
+          const Icon(Icons.check_circle, color: Colors.white),
+          const SizedBox(width: 8),
+          Text('${widget.policyType} saved successfully!'),
+        ]),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ));
 
-    // Pop wizard + type selection back to dashboard
-    Navigator.pop(context);
-    Navigator.pop(context);
+      // Pop wizard + type selection back to dashboard
+      Navigator.pop(context);
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Failed to save policy: $e'),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
   }
 
   @override
