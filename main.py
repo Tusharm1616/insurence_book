@@ -16,6 +16,17 @@ import asyncio
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Auto-migrate: Try to add phone and license_no columns if they don't exist
+        from sqlalchemy import text
+        try:
+            await conn.execute(text("ALTER TABLE users ADD COLUMN phone VARCHAR;"))
+        except Exception:
+            pass # Column likely exists
+            
+        try:
+            await conn.execute(text("ALTER TABLE users ADD COLUMN license_no VARCHAR;"))
+        except Exception:
+            pass # Column likely exists
 
 app = FastAPI(title="InsureBook API")
 
