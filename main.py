@@ -14,35 +14,48 @@ from routes import auth, customers, policies, dashboard, life_insurance, reminde
 # Create database tables
 import asyncio
 async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        from sqlalchemy import text
-        
-        # Safely run migrations
-        migrations = [
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR, ADD COLUMN IF NOT EXISTS license_no VARCHAR;",
-            "ALTER TABLE policies ADD COLUMN IF NOT EXISTS agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE;",
-            "ALTER TABLE policies RENAME COLUMN insurance_type TO policy_type;",
-            "ALTER TABLE policies ADD COLUMN IF NOT EXISTS maturity_date DATE;",
-            "ALTER TABLE policies RENAME COLUMN renewal_date TO premium_due_date;",
-            "ALTER TABLE policies ADD COLUMN IF NOT EXISTS ncb_percent FLOAT DEFAULT 0.0;",
-            "ALTER TABLE policies ADD COLUMN IF NOT EXISTS vehicle_reg_no VARCHAR(20);",
-            # Indexes
-            "CREATE INDEX IF NOT EXISTS ix_customers_agent_id ON customers(agent_id);",
-            "CREATE INDEX IF NOT EXISTS ix_customers_agent_dob ON customers(agent_id, dob);",
-            "CREATE INDEX IF NOT EXISTS ix_customers_agent_anniversary ON customers(agent_id, anniversary_date);",
-            "CREATE INDEX IF NOT EXISTS ix_policies_agent_status ON policies(agent_id, status);",
-            "CREATE INDEX IF NOT EXISTS ix_policies_agent_type ON policies(agent_id, policy_type);",
-            "CREATE INDEX IF NOT EXISTS ix_policies_agent_expiry_live ON policies(agent_id, expiry_date) WHERE status = 'live';",
-            "CREATE INDEX IF NOT EXISTS ix_policies_agent_maturity_live ON policies(agent_id, maturity_date) WHERE status = 'live';"
-        ]
-        
-        for sql in migrations:
-            try:
-                await conn.execute(text(sql))
-            except Exception as e:
-                # Ignore errors for existing columns/indexes
-                pass
+    import socket
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+                from sqlalchemy import text
+                
+                # Safely run migrations
+                migrations = [
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR, ADD COLUMN IF NOT EXISTS license_no VARCHAR;",
+                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE;",
+                    "ALTER TABLE policies RENAME COLUMN insurance_type TO policy_type;",
+                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS maturity_date DATE;",
+                    "ALTER TABLE policies RENAME COLUMN renewal_date TO premium_due_date;",
+                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS ncb_percent FLOAT DEFAULT 0.0;",
+                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS vehicle_reg_no VARCHAR(20);",
+                    # Indexes
+                    "CREATE INDEX IF NOT EXISTS ix_customers_agent_id ON customers(agent_id);",
+                    "CREATE INDEX IF NOT EXISTS ix_customers_agent_dob ON customers(agent_id, dob);",
+                    "CREATE INDEX IF NOT EXISTS ix_customers_agent_anniversary ON customers(agent_id, anniversary_date);",
+                    "CREATE INDEX IF NOT EXISTS ix_policies_agent_status ON policies(agent_id, status);",
+                    "CREATE INDEX IF NOT EXISTS ix_policies_agent_type ON policies(agent_id, policy_type);",
+                    "CREATE INDEX IF NOT EXISTS ix_policies_agent_expiry_live ON policies(agent_id, expiry_date) WHERE status = 'live';",
+                    "CREATE INDEX IF NOT EXISTS ix_policies_agent_maturity_live ON policies(agent_id, maturity_date) WHERE status = 'live';"
+                ]
+                
+                for sql in migrations:
+                    try:
+                        await conn.execute(text(sql))
+                    except Exception:
+                        # Ignore errors for existing columns/indexes
+                        pass
+            print("Database connected and initialized successfully.")
+            break
+        except Exception as e:
+            print(f"Database connection attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                await asyncio.sleep(2)
+            else:
+                print("Max retries reached. Database initialization failed.")
+                raise
 
 app = FastAPI(title="InsureBook API")
 
