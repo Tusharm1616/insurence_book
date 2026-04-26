@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
+
 import 'package:dio/dio.dart';
 import 'dart:io';
 import '../services/api_service.dart';
@@ -53,8 +53,11 @@ class MotorCalcResponse {
         finalPremium = json['final_premium']?.toDouble() ?? 0;
 }
 
-class MotorCalculatorNotifier extends StateNotifier<AsyncValue<MotorCalcResponse?>> {
-  MotorCalculatorNotifier() : super(const AsyncValue.data(null));
+class MotorCalculatorNotifier extends Notifier<AsyncValue<MotorCalcResponse?>> {
+  @override
+  AsyncValue<MotorCalcResponse?> build() {
+    return const AsyncValue.data(null);
+  }
 
   Future<void> calculatePremium(MotorCalcRequest req) async {
     state = const AsyncValue.loading();
@@ -84,6 +87,6 @@ class MotorCalculatorNotifier extends StateNotifier<AsyncValue<MotorCalcResponse
   }
 }
 
-final motorCalculatorProvider = StateNotifierProvider<MotorCalculatorNotifier, AsyncValue<MotorCalcResponse?>>((ref) {
-  return MotorCalculatorNotifier();
-});
+final motorCalculatorProvider = NotifierProvider<MotorCalculatorNotifier, AsyncValue<MotorCalcResponse?>>(
+  MotorCalculatorNotifier.new,
+);

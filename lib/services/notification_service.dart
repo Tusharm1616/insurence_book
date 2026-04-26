@@ -29,7 +29,7 @@ class NotificationService {
     );
 
     await _notificationsPlugin.initialize(
-      initializationSettings,
+      settings: initializationSettings,
       onDidReceiveNotificationResponse: (details) {
         debugPrint('Notification clicked: ${details.payload}');
       },
@@ -58,13 +58,12 @@ class NotificationService {
     );
 
     await _notificationsPlugin.zonedSchedule(
-      0,
-      'Check Today\'s Reminders',
-      'You may have upcoming birthdays or anniversaries to wish today!',
-      scheduledDate,
-      platformDetails,
+      id: 0,
+      title: 'Check Today\'s Reminders',
+      body: 'You may have upcoming birthdays or anniversaries to wish today!',
+      scheduledDate: scheduledDate,
+      notificationDetails: platformDetails,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }

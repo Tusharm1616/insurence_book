@@ -25,9 +25,11 @@ class _ExpiringPoliciesScreenState extends ConsumerState<ExpiringPoliciesScreen>
   @override
   void initState() {
     super.initState();
+    Future.microtask(() => ref.read(expiringPoliciesProvider.notifier).fetchInitial(widget.days));
+    
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
-        ref.read(expiringPoliciesProvider(widget.days).notifier).fetchMore();
+        ref.read(expiringPoliciesProvider.notifier).fetchMore(widget.days);
       }
     });
   }
@@ -46,7 +48,7 @@ class _ExpiringPoliciesScreenState extends ConsumerState<ExpiringPoliciesScreen>
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(expiringPoliciesProvider(widget.days));
+    final state = ref.watch(expiringPoliciesProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -56,7 +58,7 @@ class _ExpiringPoliciesScreenState extends ConsumerState<ExpiringPoliciesScreen>
       ),
       backgroundColor: const Color(0xFFF5F6FA),
       body: RefreshIndicator(
-        onRefresh: () => ref.read(expiringPoliciesProvider(widget.days).notifier).fetchInitial(),
+        onRefresh: () => ref.read(expiringPoliciesProvider.notifier).fetchInitial(widget.days),
         child: _buildBody(state),
       ),
     );
@@ -81,7 +83,7 @@ class _ExpiringPoliciesScreenState extends ConsumerState<ExpiringPoliciesScreen>
             Text(state.error!, textAlign: TextAlign.center),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => ref.read(expiringPoliciesProvider(widget.days).notifier).fetchInitial(),
+              onPressed: () => ref.read(expiringPoliciesProvider.notifier).fetchInitial(widget.days),
               child: const Text('Retry'),
             ),
           ],

@@ -25,8 +25,6 @@ class DashboardScreen extends ConsumerWidget {
     final expiredCount    = expired.length;
 
     // Life Insurance Report breakdown
-    final livePolicies      = lifePolicies.where((p) => !p.isExpired && !p.isExpiringSoon).length;
-    final lapsedPolicies    = lifePolicies.where((p) => p.isExpired).length;
     final expiringSoon      = lifePolicies.where((p) => p.isExpiringSoon).length;
 
     return Scaffold(
@@ -91,12 +89,12 @@ class DashboardScreen extends ConsumerWidget {
                       final count1m = countsAsync.when(
                         data: (d) => '${d.month1}',
                         loading: () => '--',
-                        error: (_, __) => '--',
+                        error: (e, st) => '--',
                       );
                       final count2m = countsAsync.when(
                         data: (d) => '${d.month2}',
                         loading: () => '--',
-                        error: (_, __) => '--',
+                        error: (e, st) => '--',
                       );
                       
                       return Column(
@@ -149,7 +147,7 @@ class DashboardScreen extends ConsumerWidget {
                       return reportAsync.when(
                         data: (report) => _buildGridReport(context, report),
                         loading: () => const Center(child: CircularProgressIndicator()),
-                        error: (_, __) => const Center(child: Text('Failed to load report')),
+                        error: (e, st) => const Center(child: Text('Failed to load report')),
                       );
                     },
                   ),

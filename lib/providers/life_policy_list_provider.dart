@@ -74,13 +74,13 @@ class LifePoliciesState {
   }
 }
 
-class LifePoliciesNotifier extends StateNotifier<LifePoliciesState> {
-  final String filter;
-  LifePoliciesNotifier(this.filter) : super(LifePoliciesState()) {
-    fetchInitial();
+class LifePoliciesNotifier extends Notifier<LifePoliciesState> {
+  @override
+  LifePoliciesState build() {
+    return LifePoliciesState();
   }
 
-  Future<void> fetchInitial() async {
+  Future<void> fetchInitial(String filter) async {
     state = state.copyWith(isLoading: true, error: null, page: 1, hasMore: true);
     try {
       final res = await apiService.dio.get('/life-insurance/policies', queryParameters: {
@@ -100,7 +100,7 @@ class LifePoliciesNotifier extends StateNotifier<LifePoliciesState> {
     }
   }
 
-  Future<void> fetchMore() async {
+  Future<void> fetchMore(String filter) async {
     if (state.isLoading || !state.hasMore) return;
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -124,6 +124,6 @@ class LifePoliciesNotifier extends StateNotifier<LifePoliciesState> {
   }
 }
 
-final lifePoliciesListProvider = StateNotifierProvider.family<LifePoliciesNotifier, LifePoliciesState, String>((ref, filter) {
-  return LifePoliciesNotifier(filter);
-});
+final lifePoliciesListProvider = NotifierProvider<LifePoliciesNotifier, LifePoliciesState>(
+  LifePoliciesNotifier.new,
+);

@@ -71,13 +71,13 @@ class ExpiringPoliciesState {
   }
 }
 
-class ExpiringPoliciesNotifier extends StateNotifier<ExpiringPoliciesState> {
-  final int days;
-  ExpiringPoliciesNotifier(this.days) : super(ExpiringPoliciesState()) {
-    fetchInitial();
+class ExpiringPoliciesNotifier extends Notifier<ExpiringPoliciesState> {
+  @override
+  ExpiringPoliciesState build() {
+    return ExpiringPoliciesState();
   }
 
-  Future<void> fetchInitial() async {
+  Future<void> fetchInitial(int days) async {
     state = state.copyWith(isLoading: true, error: null, page: 1, hasMore: true);
     try {
       final res = await apiService.dio.get('/dashboard/expiring-list', queryParameters: {
@@ -97,7 +97,7 @@ class ExpiringPoliciesNotifier extends StateNotifier<ExpiringPoliciesState> {
     }
   }
 
-  Future<void> fetchMore() async {
+  Future<void> fetchMore(int days) async {
     if (state.isLoading || !state.hasMore) return;
     state = state.copyWith(isLoading: true, error: null);
     try {
@@ -121,6 +121,6 @@ class ExpiringPoliciesNotifier extends StateNotifier<ExpiringPoliciesState> {
   }
 }
 
-final expiringPoliciesProvider = StateNotifierProvider.family<ExpiringPoliciesNotifier, ExpiringPoliciesState, int>((ref, days) {
-  return ExpiringPoliciesNotifier(days);
-});
+final expiringPoliciesProvider = NotifierProvider<ExpiringPoliciesNotifier, ExpiringPoliciesState>(
+  ExpiringPoliciesNotifier.new,
+);

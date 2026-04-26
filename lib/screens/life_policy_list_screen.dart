@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart';
-import '../core/theme.dart';
+
 import '../providers/life_policy_list_provider.dart';
 
 class LifePolicyListScreen extends ConsumerStatefulWidget {
@@ -27,9 +27,11 @@ class _LifePolicyListScreenState extends ConsumerState<LifePolicyListScreen> {
   @override
   void initState() {
     super.initState();
+    Future.microtask(() => ref.read(lifePoliciesListProvider.notifier).fetchInitial(widget.filter));
+    
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
-        ref.read(lifePoliciesListProvider(widget.filter).notifier).fetchMore();
+        ref.read(lifePoliciesListProvider.notifier).fetchMore(widget.filter);
       }
     });
   }
@@ -42,7 +44,7 @@ class _LifePolicyListScreenState extends ConsumerState<LifePolicyListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(lifePoliciesListProvider(widget.filter));
+    final state = ref.watch(lifePoliciesListProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -52,7 +54,7 @@ class _LifePolicyListScreenState extends ConsumerState<LifePolicyListScreen> {
       ),
       backgroundColor: const Color(0xFFF5F6FA),
       body: RefreshIndicator(
-        onRefresh: () => ref.read(lifePoliciesListProvider(widget.filter).notifier).fetchInitial(),
+        onRefresh: () => ref.read(lifePoliciesListProvider.notifier).fetchInitial(widget.filter),
         child: _buildBody(state),
       ),
     );
@@ -77,7 +79,7 @@ class _LifePolicyListScreenState extends ConsumerState<LifePolicyListScreen> {
             Text(state.error!, textAlign: TextAlign.center),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => ref.read(lifePoliciesListProvider(widget.filter).notifier).fetchInitial(),
+              onPressed: () => ref.read(lifePoliciesListProvider.notifier).fetchInitial(widget.filter),
               child: const Text('Retry'),
             ),
           ],

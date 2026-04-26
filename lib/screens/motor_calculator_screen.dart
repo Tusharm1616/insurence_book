@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:open_file/open_file.dart';
 import 'package:share_plus/share_plus.dart';
-import '../core/theme.dart';
 import '../providers/motor_calculator_provider.dart';
 
 class MotorCalculatorScreen extends ConsumerStatefulWidget {
@@ -67,7 +66,7 @@ class _MotorCalculatorScreenState extends ConsumerState<MotorCalculatorScreen> {
     
     if (path != null && mounted) {
       if (share) {
-        Share.shareXFiles([XFile(path)], text: 'Motor Insurance Quotation');
+        await SharePlus.instance.share(ShareParams(files: [XFile(path)], text: 'Motor Insurance Quotation'));
       } else {
         OpenFile.open(path);
       }
@@ -136,7 +135,7 @@ class _MotorCalculatorScreenState extends ConsumerState<MotorCalculatorScreen> {
             const Text('Vehicle Details', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _vehicleType,
+              initialValue: _vehicleType,
               decoration: const InputDecoration(labelText: 'Vehicle Type', border: OutlineInputBorder()),
               items: ['2W', '4W', 'CV'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
               onChanged: (v) => setState(() => _vehicleType = v!),
@@ -172,7 +171,7 @@ class _MotorCalculatorScreenState extends ConsumerState<MotorCalculatorScreen> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<double>(
-              value: _ncbPercent,
+              initialValue: _ncbPercent,
               decoration: const InputDecoration(labelText: 'NCB Discount', border: OutlineInputBorder()),
               items: [0.0, 20.0, 25.0, 35.0, 45.0, 50.0].map((e) => DropdownMenuItem(value: e, child: Text('${e.toInt()}%'))).toList(),
               onChanged: (v) => setState(() => _ncbPercent = v!),
