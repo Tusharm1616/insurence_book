@@ -4,6 +4,8 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../core/theme.dart';
 import '../providers/customer_provider.dart';
 import '../providers/policy_provider.dart';
+import '../providers/dashboard_provider.dart';
+import '../providers/life_report_provider.dart';
 import '../screens/customer_policy_screen.dart';
 
 class DashboardScreen extends ConsumerWidget {
@@ -81,6 +83,39 @@ class DashboardScreen extends ConsumerWidget {
                     child: _buildStatRowCard('Expired Policy', '$expiredCount', LucideIcons.alertTriangle, Colors.red),
                   ),
                   const SizedBox(height: 8),
+                  
+                  // New Expiring Policy Tiles
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final countsAsync = ref.watch(expiringCountsProvider);
+                      final count1m = countsAsync.when(
+                        data: (d) => '${d.month1}',
+                        loading: () => '--',
+                        error: (_, __) => '--',
+                      );
+                      final count2m = countsAsync.when(
+                        data: (d) => '${d.month2}',
+                        loading: () => '--',
+                        error: (_, __) => '--',
+                      );
+                      
+                      return Column(
+                        children: [
+                          GestureDetector(
+                            onTap: () => Navigator.pushNamed(context, '/expiring_policies', arguments: {'days': 30, 'title': 'Expiring Within 1 Month'}),
+                            child: _buildStatRowCard('Expiring Within 1 Month', count1m, LucideIcons.calendar, const Color(0xFFFF9800)),
+                          ),
+                          const SizedBox(height: 8),
+                          GestureDetector(
+                            onTap: () => Navigator.pushNamed(context, '/expiring_policies', arguments: {'days': 60, 'title': 'Expiring Within 2 Months'}),
+                            child: _buildStatRowCard('Expiring Within 2 Months', count2m, LucideIcons.calendarDays, const Color(0xFFFFC107)),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+
                   GestureDetector(
                     onTap: () => Navigator.pushNamed(context, '/customers'),
                     child: _buildStatRowCard('Active Customers', '$activeCustomers', LucideIcons.userCheck, Colors.teal),
@@ -108,15 +143,24 @@ class DashboardScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   _buildSectionHeader('Life Insurance Report', LucideIcons.clipboardList),
                   const SizedBox(height: 12),
-                  _buildGridReport(context, lifePolicies: lifePolicies.length, live: livePolicies, lapsed: lapsedPolicies, expiringSoon: expiringSoon),
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final reportAsync = ref.watch(lifeReportProvider);
+                      return reportAsync.when(
+                        data: (report) => _buildGridReport(context, report),
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (_, __) => const Center(child: Text('Failed to load report')),
+                      );
+                    },
+                  ),
 
                   // ── Other Features ───────────────────────────────
                   const SizedBox(height: 24),
                   _buildSectionHeader('Other Features', LucideIcons.moreHorizontal),
                   const SizedBox(height: 12),
                   _buildFeatureRow(context, 'Vehicle Document Validity', 'RTO Document Status & Expiry', LucideIcons.car, Colors.teal),
-                  _buildFeatureRow(context, 'Customers Birthday', 'Customers birthday reminders', LucideIcons.cake, Colors.pink),
-                  _buildFeatureRow(context, 'Customers Anniversary', 'Customers anniversary reminders', LucideIcons.heart, Colors.red),
+                  _buildFeatureRow(context, 'Customers Birthday', 'Customers birthday reminders', LucideIcons.cake, Colors.pink, route: '/reminders', routeArgs: {'type': 'birthdays'}),
+                  _buildFeatureRow(context, 'Customers Anniversary', 'Customers anniversary reminders', LucideIcons.heart, Colors.red, route: '/reminders', routeArgs: {'type': 'anniversaries'}),
                   _buildFeatureRow(context, 'Motor Insurance Calculator', 'Calculate premium & generate PDF quotes', LucideIcons.calculator, Colors.purple, route: '/motor_calculator'),
                   const SizedBox(height: 24),
                 ],
@@ -213,19 +257,14 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildGridReport(BuildContext context, {
-    required int lifePolicies,
-    required int live,
-    required int lapsed,
-    required int expiringSoon,
-  }) {
+  Widget _buildGridReport(BuildContext context, LifeReportSummary report) {
     final reports = [
-      {'title': 'Live Policy',       'icon': LucideIcons.checkCircle,  'color': Colors.green,      'count': live},
-      {'title': 'Premium Holiday',   'icon': LucideIcons.pauseCircle,  'color': Colors.orange,     'count': 0},
-      {'title': 'Premium Paidup',    'icon': LucideIcons.checkCircle2, 'color': Colors.purple,     'count': 0},
-      {'title': 'Upcoming Maturity', 'icon': LucideIcons.clock,        'color': Colors.teal,       'count': expiringSoon},
-      {'title': 'Matured Policy',    'icon': LucideIcons.calendarCheck,'color': Colors.deepPurple, 'count': 0},
-      {'title': 'Lapsed Policy',     'icon': LucideIcons.xCircle,      'color': Colors.red,        'count': lapsed},
+      {'title': 'Live Policy',       'icon': LucideIcons.checkCircle,  'color': Colors.green,      'count': report.live, 'filter': 'live'},
+      {'title': 'Premium Holiday',   'icon': LucideIcons.pauseCircle,  'color': Colors.orange,     'count': report.premiumHoliday, 'filter': 'premium holiday'},
+      {'title': 'Premium Paidup',    'icon': LucideIcons.checkCircle2, 'color': Colors.purple,     'count': report.premiumPaidup, 'filter': 'paidup'},
+      {'title': 'Upcoming Maturity', 'icon': LucideIcons.clock,        'color': Colors.teal,       'count': report.upcomingMaturity, 'filter': 'upcoming maturity'},
+      {'title': 'Matured Policy',    'icon': LucideIcons.calendarCheck,'color': Colors.deepPurple, 'count': report.matured, 'filter': 'matured'},
+      {'title': 'Lapsed Policy',     'icon': LucideIcons.xCircle,      'color': Colors.red,        'count': report.lapsed, 'filter': 'lapsed'},
     ];
 
     return GridView.builder(
@@ -237,24 +276,31 @@ class DashboardScreen extends ConsumerWidget {
       itemCount: reports.length,
       itemBuilder: (context, index) {
         final r = reports[index];
-        return Card(
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(r['icon'] as IconData, color: r['color'] as Color, size: 24),
-            const SizedBox(height: 6),
-            Text('${r['count']}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: r['color'] as Color)),
-            Text(r['title'] as String, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
-          ]),
+        return GestureDetector(
+          onTap: () => Navigator.pushNamed(context, '/life_policies', arguments: {
+            'filter': r['filter'],
+            'title': r['title'],
+            'color': r['color'],
+          }),
+          child: Card(
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(r['icon'] as IconData, color: r['color'] as Color, size: 24),
+              const SizedBox(height: 6),
+              Text('${r['count']}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: r['color'] as Color)),
+              Text(r['title'] as String, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+            ]),
+          ),
         );
       },
     );
   }
 
-  Widget _buildFeatureRow(BuildContext context, String title, String sub, IconData icon, Color color, {String? route}) {
+  Widget _buildFeatureRow(BuildContext context, String title, String sub, IconData icon, Color color, {String? route, Map<String, dynamic>? routeArgs}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
       child: ListTile(
-        onTap: () { if (route != null) Navigator.pushNamed(context, route); },
+        onTap: () { if (route != null) Navigator.pushNamed(context, route, arguments: routeArgs); },
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),

@@ -18,8 +18,18 @@ import 'screens/bank_details_screen.dart';
 import 'screens/contact_us_screen.dart';
 import 'screens/banner_screen.dart';
 import 'screens/generic_placeholder_screen.dart';
+import 'screens/expiring_policies_screen.dart';
+import 'screens/life_policy_list_screen.dart';
+import 'screens/reminders_screen.dart';
+import 'services/notification_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  final notificationService = NotificationService();
+  await notificationService.init();
+  await notificationService.scheduleDailyReminder();
+
   runApp(
     const ProviderScope(
       child: InsureBookApp(),
@@ -56,6 +66,33 @@ class InsureBookApp extends StatelessWidget {
         '/terms':            (context) => const GenericPlaceholderScreen(title: 'Terms & Conditions'),
       },
       onGenerateRoute: (settings) {
+        if (settings.name == '/expiring_policies') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (_) => ExpiringPoliciesScreen(
+              days: args['days'] as int,
+              title: args['title'] as String,
+            ),
+          );
+        }
+        if (settings.name == '/life_policies') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (_) => LifePolicyListScreen(
+              filter: args['filter'] as String,
+              title: args['title'] as String,
+              themeColor: args['color'] as Color,
+            ),
+          );
+        }
+        if (settings.name == '/reminders') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (_) => RemindersScreen(
+              type: args['type'] as String,
+            ),
+          );
+        }
         if (settings.name == '/all_leads') return MaterialPageRoute(builder: (_) => LeadListScreen(title: 'All Leads', filterProvider: leadProvider));
         if (settings.name == '/unassigned_leads') return MaterialPageRoute(builder: (_) => LeadListScreen(title: 'Unassigned Leads', filterProvider: unassignedLeadsProvider));
         if (settings.name == '/followup_leads') return MaterialPageRoute(builder: (_) => LeadListScreen(title: "Today's Follow-ups", filterProvider: todayFollowupsProvider));
