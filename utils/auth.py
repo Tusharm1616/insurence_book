@@ -3,29 +3,35 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
 
-# Fix passlib bug with bcrypt 4.1+
 import bcrypt
-try:
-    _ = bcrypt.__about__
-except AttributeError:
-    class _About:
-        __version__ = getattr(bcrypt, "__version__", "4.0.0")
-    bcrypt.__about__ = _About
-
-from passlib.context import CryptContext
 
 # Security configuration
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-very-secret-key-for-development")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 hours
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+    if isinstance(plain_password, str):
+        plain_password = plain_password[:72].encode('utf-8')
+    elif isinstance(plain_password, bytes):
+        plain_password = plain_password[:72]
+    
+    if isinstance(hashed_password, str):
+        hashed_password = hashed_password.encode('utf-8')
+        
+    try:
+        return bcrypt.checkpw(plain_password, hashed_password)
+    except Exception:
+        return False
 
 def get_password_hash(password):
-    return pwd_context.hash(password)
+    if isinstance(password, str):
+        password = password[:72].encode('utf-8')
+    elif isinstance(password, bytes):
+        password = password[:72]
+        
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password, salt).decode('utf-8')
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
