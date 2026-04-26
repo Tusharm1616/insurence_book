@@ -38,7 +38,8 @@ async def init_db():
                     "CREATE INDEX IF NOT EXISTS ix_policies_agent_status ON policies(agent_id, status);",
                     "CREATE INDEX IF NOT EXISTS ix_policies_agent_type ON policies(agent_id, policy_type);",
                     "CREATE INDEX IF NOT EXISTS ix_policies_agent_expiry_live ON policies(agent_id, expiry_date) WHERE status = 'live';",
-                    "CREATE INDEX IF NOT EXISTS ix_policies_agent_maturity_live ON policies(agent_id, maturity_date) WHERE status = 'live';"
+                    "CREATE INDEX IF NOT EXISTS ix_policies_agent_maturity_live ON policies(agent_id, maturity_date) WHERE status = 'live';",
+                    "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
                 ]
                 
                 for sql in migrations:
