@@ -9,19 +9,40 @@ from utils.auth import verify_password, get_password_hash, create_access_token, 
 from models.users import User, UserRole
 
 from fastapi.middleware.cors import CORSMiddleware
-from routes import auth, customers, policies
+from routes import auth, customers, policies, dashboard, life_insurance, reminders, motor
 
 # Create database tables
 import asyncio
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        # Auto-migrate: Try to add phone and license_no columns safely
         from sqlalchemy import text
-        try:
-            await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR, ADD COLUMN IF NOT EXISTS license_no VARCHAR;"))
-        except Exception as e:
-            print("Auto-migration skipped or failed:", e)
+        
+        # Safely run migrations
+        migrations = [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR, ADD COLUMN IF NOT EXISTS license_no VARCHAR;",
+            "ALTER TABLE policies ADD COLUMN IF NOT EXISTS agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE;",
+            "ALTER TABLE policies RENAME COLUMN insurance_type TO policy_type;",
+            "ALTER TABLE policies ADD COLUMN IF NOT EXISTS maturity_date DATE;",
+            "ALTER TABLE policies RENAME COLUMN renewal_date TO premium_due_date;",
+            "ALTER TABLE policies ADD COLUMN IF NOT EXISTS ncb_percent FLOAT DEFAULT 0.0;",
+            "ALTER TABLE policies ADD COLUMN IF NOT EXISTS vehicle_reg_no VARCHAR(20);",
+            # Indexes
+            "CREATE INDEX IF NOT EXISTS ix_customers_agent_id ON customers(agent_id);",
+            "CREATE INDEX IF NOT EXISTS ix_customers_agent_dob ON customers(agent_id, dob);",
+            "CREATE INDEX IF NOT EXISTS ix_customers_agent_anniversary ON customers(agent_id, anniversary_date);",
+            "CREATE INDEX IF NOT EXISTS ix_policies_agent_status ON policies(agent_id, status);",
+            "CREATE INDEX IF NOT EXISTS ix_policies_agent_type ON policies(agent_id, policy_type);",
+            "CREATE INDEX IF NOT EXISTS ix_policies_agent_expiry_live ON policies(agent_id, expiry_date) WHERE status = 'live';",
+            "CREATE INDEX IF NOT EXISTS ix_policies_agent_maturity_live ON policies(agent_id, maturity_date) WHERE status = 'live';"
+        ]
+        
+        for sql in migrations:
+            try:
+                await conn.execute(text(sql))
+            except Exception as e:
+                # Ignore errors for existing columns/indexes
+                pass
 
 app = FastAPI(title="InsureBook API")
 
@@ -42,6 +63,10 @@ app.include_router(auth.router)
 app.include_router(auth.api_auth_router)
 app.include_router(customers.router)
 app.include_router(policies.router)
+app.include_router(dashboard.router)
+app.include_router(life_insurance.router)
+app.include_router(reminders.router)
+app.include_router(motor.router)
 
 @app.get("/")
 def read_root():
