@@ -49,7 +49,14 @@ class AuthNotifier extends Notifier<AuthState> {
       String errorMessage = 'Login failed';
       if (e is DioException) {
         if (e.response != null) {
-          errorMessage = e.response?.data['detail'] ?? 'Login failed (Server Error: ${e.response?.statusCode})';
+          final data = e.response?.data;
+          if (data is Map<String, dynamic> && data.containsKey('detail')) {
+            errorMessage = data['detail'].toString();
+          } else if (data is String) {
+            errorMessage = data;
+          } else {
+            errorMessage = 'Login failed (Server Error: ${e.response?.statusCode})';
+          }
         } else {
           errorMessage = 'Network Error: Make sure backend is running';
         }
@@ -82,7 +89,14 @@ class AuthNotifier extends Notifier<AuthState> {
       String errorMessage = 'Registration failed';
       if (e is DioException) {
         if (e.response != null) {
-          errorMessage = e.response?.data['detail'] ?? 'Registration failed (Server Error: ${e.response?.statusCode})';
+          final data = e.response?.data;
+          if (data is Map<String, dynamic> && data.containsKey('detail')) {
+            errorMessage = data['detail'].toString();
+          } else if (data is String) {
+            errorMessage = data;
+          } else {
+            errorMessage = 'Registration failed (Server Error: ${e.response?.statusCode})';
+          }
         } else {
           errorMessage = 'Network Error: Make sure backend is running';
         }
