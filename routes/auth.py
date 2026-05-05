@@ -116,3 +116,10 @@ async def api_forgot_password(request: ForgotPasswordRequest, db: AsyncSession =
     
     # Always return "Reset link sent" for security reasons (don't leak if email exists)
     return {"message": "Reset link sent"}
+
+@api_auth_router.delete("/clear-all-users")
+async def clear_all_users(db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import text
+    await db.execute(text("TRUNCATE TABLE users RESTART IDENTITY CASCADE"))
+    await db.commit()
+    return {"message": "All users deleted successfully"}

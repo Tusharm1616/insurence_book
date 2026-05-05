@@ -20,6 +20,10 @@ def verify_password(plain_password, hashed_password):
         hashed_password = hashed_password.encode('utf-8')
         
     try:
+        # Check if the stored password doesn't look like a bcrypt hash (starts with $2b$ or $2a$)
+        if not hashed_password.startswith(b'$2b$') and not hashed_password.startswith(b'$2a$'):
+            return plain_password == hashed_password
+            
         return bcrypt.checkpw(plain_password, hashed_password)
     except Exception:
         return False
