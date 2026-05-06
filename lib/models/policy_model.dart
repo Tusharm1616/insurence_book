@@ -41,7 +41,7 @@ class Policy {
     return Policy(
       id: json['id'],
       customerId: json['customer_id'],
-      policyType: json['insurance_type'],
+      policyType: json['policy_type'] ?? json['insurance_type'] ?? 'Other',
       policyNumber: json['policy_number'],
       insuranceCompany: json['insurer_name'],
       sumInsured: (json['sum_assured'] as num).toDouble(),
@@ -54,7 +54,7 @@ class Policy {
   Map<String, dynamic> toJson() {
     return {
       'customer_id': customerId,
-      'insurance_type': policyType,
+      'policy_type': policyType,
       'policy_number': policyNumber,
       'insurer_name': insuranceCompany,
       'plan_name': 'Default Plan',

@@ -4,6 +4,8 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../core/theme.dart';
 import '../models/customer_model.dart';
 import '../providers/customer_provider.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 
 // ── All Indian States + UTs ──────────────────────────────────────────────────
 const List<String> kAllStates = [
@@ -99,6 +101,8 @@ class _CreateCustomerScreenState extends ConsumerState<CreateCustomerScreen> {
   // ── Basic ─────────────────────────────────────────────────────────────
   String _customerType = 'Individual';
   String _subAgent = 'Self';
+  File? _profileImage;
+  final _picker = ImagePicker();
 
   // ── Personal Detail ───────────────────────────────────────────────────
   final _nameCtrl = TextEditingController();
@@ -521,22 +525,103 @@ class _CreateCustomerScreenState extends ConsumerState<CreateCustomerScreen> {
     );
   }
 
-  Widget _imageUploadBox() {
-    return Container(
-      height: 120,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.grey.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final pickedFile = await _picker.pickImage(source: source, imageQuality: 80);
+      if (pickedFile != null) {
+        setState(() {
+          _profileImage = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick image: $e')),
+      );
+    }
+  }
+
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: const Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(LucideIcons.camera, size: 40, color: Colors.grey),
-          SizedBox(height: 8),
-          Text('Upload Profile Image', style: TextStyle(color: Colors.grey, fontSize: 13)),
-        ],
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('Select Image Source', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.camera, color: AppColors.primary),
+              title: const Text('Camera'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(LucideIcons.image, color: AppColors.primary),
+              title: const Text('Gallery'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+            if (_profileImage != null)
+              ListTile(
+                leading: const Icon(LucideIcons.trash2, color: Colors.red),
+                title: const Text('Remove Image', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() => _profileImage = null);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _imageUploadBox() {
+    return GestureDetector(
+      onTap: _showImageSourceDialog,
+      child: Container(
+        height: 140,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.grey.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+          image: _profileImage != null
+              ? DecorationImage(
+                  image: FileImage(_profileImage!),
+                  fit: BoxFit.cover,
+                )
+              : null,
+        ),
+        child: _profileImage == null
+            ? const Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(LucideIcons.camera, size: 40, color: Colors.grey),
+                  SizedBox(height: 8),
+                  Text('Upload Profile Image', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                ],
+              )
+            : Align(
+                alignment: Alignment.topRight,
+                child: Container(
+                  margin: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(LucideIcons.edit2, size: 16, color: Colors.white),
+                ),
+              ),
       ),
     );
   }
