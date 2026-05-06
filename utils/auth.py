@@ -11,6 +11,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 hours
 
 def verify_password(plain_password, hashed_password):
+    """Verifies a plain text password against a hashed password."""
     if isinstance(plain_password, str):
         plain_password = plain_password[:72].encode('utf-8')
     elif isinstance(plain_password, bytes):
