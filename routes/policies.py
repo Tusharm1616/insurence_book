@@ -29,6 +29,7 @@ async def create_policy(
         raise HTTPException(status_code=404, detail="Customer not found or access denied")
         
     new_policy = Policy(**policy_in.dict())
+    new_policy.agent_id = current_user.id
     db.add(new_policy)
     await db.commit()
     await db.refresh(new_policy)
