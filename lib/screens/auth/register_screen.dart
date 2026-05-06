@@ -39,6 +39,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
     
+    // Hide any lingering snackbars immediately
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
     if (!_agreeToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -64,6 +67,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       if (!mounted) return;
       
       if (success) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Registration successful! Please login.'),
@@ -73,6 +77,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         Navigator.pushReplacementNamed(context, '/login');
       } else {
         final error = ref.read(authProvider).error;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(error ?? 'Registration failed'),
@@ -239,7 +244,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       style: TextStyle(color: Color(0xFF6B7280)),
                     ),
                     GestureDetector(
-                      onTap: () => Navigator.pushReplacementNamed(context, '/login'),
+                      onTap: () {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        Navigator.pushReplacementNamed(context, '/login');
+                      },
                       child: const Text(
                         'Login',
                         style: TextStyle(
