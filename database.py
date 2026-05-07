@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
+import logging
 
 load_dotenv()
 
@@ -17,15 +18,26 @@ DATABASE_URL = DATABASE_URL.replace(
     "postgresql+asyncpg://"
 )
 
-print("Using DB:", DATABASE_URL)  # debug
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.info(f"Using database: {DATABASE_URL.split('@')[1] if '@' in DATABASE_URL else 'local'}")
 
-engine = create_async_engine(DATABASE_URL)
+# Enhanced engine configuration with connection pooling
+engine = create_async_engine(
+    DATABASE_URL,
+    pool_size=20,
+    max_overflow=30,
+    pool_pre_ping=True,
+    pool_recycle=3600,
+    echo=os.getenv("DEBUG", "false").lower() == "true"
+)
 
 SessionLocal = async_sessionmaker(
     autocommit=False,
     autoflush=False,
     bind=engine,
-    class_=AsyncSession
+    class_=AsyncSession,
+    expire_on_commit=False
 )
 
 class Base(DeclarativeBase):
@@ -33,4 +45,11 @@ class Base(DeclarativeBase):
 
 async def get_db():
     async with SessionLocal() as session:
-        yield session
+        try:
+            yield session
+        except Exception as e:
+            logger.error(f"Database session error: {e}")
+            await session.rollback()
+            raise
+        finally:
+            await session.close()

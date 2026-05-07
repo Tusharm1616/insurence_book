@@ -3,6 +3,12 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta
 import uvicorn
+import logging
+import os
+from contextlib import asynccontextmanager
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from database import engine, Base, get_db
 from utils.auth import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
@@ -10,6 +16,9 @@ from models.users import User, UserRole
 
 from fastapi.middleware.cors import CORSMiddleware
 from routes import auth, customers, policies, dashboard, life_insurance, reminders, motor
+
+# Rate limiting configuration
+limiter = Limiter(key_func=get_remote_address)
 
 # Create database tables
 import asyncio
@@ -58,20 +67,32 @@ async def init_db():
                 print("Max retries reached. Database initialization failed.")
                 raise
 
-app = FastAPI(title="InsureBook API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    logger.info("Starting InsureBook API...")
+    await init_db()
+    logger.info("InsureBook API started successfully")
+    yield
+    # Shutdown
+    logger.info("Shutting down InsureBook API...")
+
+app = FastAPI(title="InsureBook API", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS configuration
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",") if os.getenv("ALLOWED_ORIGINS") else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, specify exact origins
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
-
-@app.on_event("startup")
-async def startup_event():
-    await init_db()
 
 app.include_router(auth.router)
 app.include_router(auth.api_auth_router)
@@ -83,8 +104,14 @@ app.include_router(reminders.router)
 app.include_router(motor.router)
 
 @app.get("/")
-def read_root():
-    return {"message": "Welcome to InsureBook API"}
+@limiter.limit("100/minute")
+def read_root(request):
+    return {"message": "Welcome to InsureBook API", "version": "2.0.0"}
+
+@app.get("/health")
+@limiter.limit("200/minute")
+def health_check(request):
+    return {"status": "healthy", "service": "InsureBook API"}
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
