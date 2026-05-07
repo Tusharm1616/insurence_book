@@ -14,4 +14,3 @@ pydantic-settings
 httpx
 slowapi==0.1.9
 redis==5.0.4
-limiter==0.3.2
