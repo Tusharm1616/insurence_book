@@ -40,6 +40,26 @@ async def init_db():
                     "ALTER TABLE policies RENAME COLUMN renewal_date TO premium_due_date;",
                     "ALTER TABLE policies ADD COLUMN IF NOT EXISTS ncb_percent FLOAT DEFAULT 0.0;",
                     "ALTER TABLE policies ADD COLUMN IF NOT EXISTS vehicle_reg_no VARCHAR(20);",
+                    # Reminders table creation
+                    """
+                    CREATE TABLE IF NOT EXISTS reminders (
+                        id SERIAL PRIMARY KEY,
+                        agent_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+                        title VARCHAR NOT NULL,
+                        reminder_type VARCHAR DEFAULT 'birthday',
+                        person_name VARCHAR NOT NULL,
+                        phone_number VARCHAR,
+                        reminder_date DATE NOT NULL,
+                        notes TEXT,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        notify_whatsapp BOOLEAN DEFAULT TRUE,
+                        notify_call BOOLEAN DEFAULT FALSE,
+                        days_before INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    """,
                     # Indexes
                     "CREATE INDEX IF NOT EXISTS ix_customers_agent_id ON customers(agent_id);",
                     "CREATE INDEX IF NOT EXISTS ix_customers_agent_dob ON customers(agent_id, dob);",
@@ -48,6 +68,12 @@ async def init_db():
                     "CREATE INDEX IF NOT EXISTS ix_policies_agent_type ON policies(agent_id, policy_type);",
                     "CREATE INDEX IF NOT EXISTS ix_policies_agent_expiry_live ON policies(agent_id, expiry_date) WHERE status = 'live';",
                     "CREATE INDEX IF NOT EXISTS ix_policies_agent_maturity_live ON policies(agent_id, maturity_date) WHERE status = 'live';",
+                    # Reminder indexes
+                    "CREATE INDEX IF NOT EXISTS ix_reminders_agent_id ON reminders(agent_id);",
+                    "CREATE INDEX IF NOT EXISTS ix_reminders_date ON reminders(reminder_date);",
+                    "CREATE INDEX IF NOT EXISTS ix_reminders_agent_date ON reminders(agent_id, reminder_date);",
+                    "CREATE INDEX IF NOT EXISTS ix_reminders_type ON reminders(reminder_type);",
+                    "CREATE INDEX IF NOT EXISTS ix_reminders_active ON reminders(is_active);",
                     "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
                 ]
                 
