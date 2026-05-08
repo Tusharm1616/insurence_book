@@ -41,7 +41,7 @@ class TwoWheelerPolicyCreate(BaseModel):
     coverage_type: TwoWheelerCoverageType
     idv: Optional[float] = Field(None, gt=0)  # Insured Declared Value
     ncb_percent: float = Field(0.0, ge=0, le=50)
-    policy_period: str = Field("1 year", regex="^(1 year|3 years|5 years)$")
+    policy_period: str = Field("1 year", pattern="^(1 year|3 years|5 years)$")
     addons: TwoWheelerAddOns = TwoWheelerAddOns()
     previous_policy_number: Optional[str] = Field(None, max_length=50)
     previous_insurer: Optional[str] = Field(None, max_length=100)
@@ -78,7 +78,7 @@ class TwoWheelerPolicyUpdate(BaseModel):
     coverage_type: Optional[TwoWheelerCoverageType] = None
     idv: Optional[float] = Field(None, gt=0)
     ncb_percent: Optional[float] = Field(None, ge=0, le=50)
-    policy_period: Optional[str] = Field(None, regex="^(1 year|3 years|5 years)$")
+    policy_period: Optional[str] = Field(None, pattern="^(1 year|3 years|5 years)$")
     addons: Optional[TwoWheelerAddOns] = None
     previous_policy_number: Optional[str] = Field(None, max_length=50)
     previous_insurer: Optional[str] = Field(None, max_length=100)
@@ -120,7 +120,7 @@ class TwoWheelerQuoteCreate(BaseModel):
     coverage_type: TwoWheelerCoverageType
     idv: Optional[float] = Field(None, gt=0)
     ncb_percent: float = Field(0.0, ge=0, le=50)
-    policy_period: str = Field("1 year", regex="^(1 year|3 years|5 years)$")
+    policy_period: str = Field("1 year", pattern="^(1 year|3 years|5 years)$")
     addons: TwoWheelerAddOns = TwoWheelerAddOns()
     valid_until: Optional[date] = None
 

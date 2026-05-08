@@ -95,7 +95,7 @@ class PolicyDetails(BaseModel):
 class LifeInsuranceDetails(BaseModel):
     policy_term: int = Field(..., ge=1, le=100)  # years
     sum_assured: float = Field(..., gt=0)
-    premium_payment_term: str = Field("Regular", regex="^(Regular|Single|Limited)$")
+    premium_payment_term: str = Field("Regular", pattern="^(Regular|Single|Limited)$")
     riders: List[str] = Field(default_factory=list)
     medical_required: bool = True
     nominee_name: Optional[str] = None
@@ -112,7 +112,7 @@ class HealthInsuranceDetails(BaseModel):
     family_members: List[Dict[str, Any]] = Field(default_factory=list)
 
 class MotorInsuranceDetails(BaseModel):
-    vehicle_type: str = Field(..., regex="^(2W|4W|CV)$")
+    vehicle_type: str = Field(..., pattern="^(2W|4W|CV)$")
     vehicle_make: str = Field(..., min_length=2, max_length=50)
     vehicle_model: str = Field(..., min_length=2, max_length=50)
     manufacture_year: int = Field(..., ge=1990, le=datetime.now().year + 1)
@@ -125,7 +125,7 @@ class MotorInsuranceDetails(BaseModel):
     previous_policy_number: Optional[str] = None
 
 class TwoWheelerDetails(BaseModel):
-    vehicle_type: str = Field(..., regex="^(Motorcycle|Scooter|Electric Scooter|Moped)$")
+    vehicle_type: str = Field(..., pattern="^(Motorcycle|Scooter|Electric Scooter|Moped)$")
     vehicle_make: str = Field(..., min_length=2, max_length=50)
     vehicle_model: str = Field(..., min_length=2, max_length=50)
     manufacture_year: int = Field(..., ge=1990, le=datetime.now().year + 1)
@@ -133,11 +133,11 @@ class TwoWheelerDetails(BaseModel):
     engine_capacity: int = Field(..., ge=50, le=2000)
     fuel_type: Optional[str] = Field(None, max_length=20)
     vehicle_value: float = Field(..., gt=0)
-    coverage_type: str = Field(..., regex="^(third_party|comprehensive|own_damage)$")
-    policy_period: str = Field("1 year", regex="^(1 year|3 years|5 years)$")
+    coverage_type: str = Field(..., pattern="^(third_party|comprehensive|own_damage)$")
+    policy_period: str = Field("1 year", pattern="^(1 year|3 years|5 years)$")
 
 class TravelInsuranceDetails(BaseModel):
-    travel_type: str = Field(..., regex="^(Domestic|International|Student)$")
+    travel_type: str = Field(..., pattern="^(Domestic|International|Student)$")
     destination_countries: List[str] = Field(default_factory=list)
     travel_duration: int = Field(..., ge=1, le=365)  # days
     trip_start_date: date
@@ -148,7 +148,7 @@ class TravelInsuranceDetails(BaseModel):
     lost_baggage: bool = False
 
 class HomeInsuranceDetails(BaseModel):
-    property_type: str = Field(..., regex="^(Apartment|House|Villa|Commercial)$")
+    property_type: str = Field(..., pattern="^(Apartment|House|Villa|Commercial)$")
     property_age: int = Field(..., ge=0, le=100)
     building_sum_insured: float = Field(..., gt=0)
     contents_sum_insured: float = Field(..., gt=0)
@@ -186,7 +186,7 @@ class AccidentInsuranceDetails(BaseModel):
 class TermInsuranceDetails(BaseModel):
     policy_term: int = Field(..., ge=5, le=40)  # years
     sum_assured: float = Field(..., gt=0)
-    premium_payment_term: str = Field("Regular", regex="^(Regular|Single|Limited)$")
+    premium_payment_term: str = Field("Regular", pattern="^(Regular|Single|Limited)$")
     return_of_premium: bool = False
     increasing_cover: bool = False
     critical_illness_rider: bool = False
@@ -209,39 +209,6 @@ class AddPolicyRequest(BaseModel):
     shop_commercial_insurance: Optional[ShopCommercialDetails] = None
     accident_insurance: Optional[AccidentInsuranceDetails] = None
     term_insurance: Optional[TermInsuranceDetails] = None
-
-    @validator('expiry_date', pre=True, always=True)
-    def validate_dates(cls, v, values):
-        if 'policy_details' in values and 'issue_date' in values['policy_details']:
-            issue_date = values['policy_details']['issue_date']
-            if v <= issue_date:
-                raise ValueError('Expiry date must be after issue date')
-        return v
-
-    @validator('*', pre=True)
-    def validate_insurance_type_details(cls, v, values):
-        insurance_category = values.get('insurance_category')
-        
-        # Define required fields for each insurance type
-        required_fields = {
-            InsuranceCategory.LIFE: ['life_insurance'],
-            InsuranceCategory.HEALTH: ['health_insurance'],
-            InsuranceCategory.MOTOR: ['motor_insurance'],
-            InsuranceCategory.TWO_WHEELER: ['two_wheeler_insurance'],
-            InsuranceCategory.TRAVEL: ['travel_insurance'],
-            InsuranceCategory.HOME: ['home_insurance'],
-            InsuranceCategory.BUSINESS: ['business_insurance'],
-            InsuranceCategory.SHOP_COMMERCIAL: ['shop_commercial_insurance'],
-            InsuranceCategory.ACCIDENT: ['accident_insurance'],
-            InsuranceCategory.TERM: ['term_insurance']
-        }
-        
-        if insurance_category and insurance_category in required_fields:
-            required_field = required_fields[insurance_category][0]
-            if not values.get(required_field):
-                raise ValueError(f'{required_field} details are required for {insurance_category.value}')
-        
-        return v
 
 class AddPolicyResponse(BaseModel):
     success: bool
