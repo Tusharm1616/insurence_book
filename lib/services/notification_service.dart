@@ -16,8 +16,9 @@ class NotificationService {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings(
           '@mipmap/ic_launcher',
-          requestExactAlarms: true,
-          requestFullIntentPendingIntent: true,
+        requestAlertPermission: true,
+          requestBadgePermission: true,
+          requestSoundPermission: true,
         );
 
     const DarwinInitializationSettings initializationSettingsIOS =
@@ -67,9 +68,8 @@ class NotificationService {
       body: 'You may have upcoming birthdays or anniversaries to wish today!',
       scheduledDate: scheduledDate,
       notificationDetails: platformDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAndAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.exact,
       matchDateTimeComponents: DateTimeComponents.time,
-      uiLocalNotificationDate: scheduledDate,
     );
   }
 }
