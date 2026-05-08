@@ -202,20 +202,32 @@ class CustomerPolicyScreen extends ConsumerWidget {
 
   IconData _iconForType(String type) {
     switch (type) {
-      case 'Life Insurance': return LucideIcons.heart;
-      case 'Health Insurance': return LucideIcons.plus;
+      case 'Health Insurance': return LucideIcons.activity;
       case 'Motor Insurance': return LucideIcons.car;
-      case 'WC Insurance': return LucideIcons.briefcase;
+      case 'Life Insurance': return LucideIcons.heart;
+      case 'Travel Insurance': return LucideIcons.plane;
+      case 'Home Insurance': return LucideIcons.home;
+      case 'Business Insurance': return LucideIcons.building;
+      case 'Shop / Commercial': return LucideIcons.store;
+      case 'Two Wheeler': return Icons.two_wheeler;
+      case 'Accident Insurance': return Icons.local_hospital;
+      case 'Term Insurance': return LucideIcons.shieldCheck;
       default: return LucideIcons.shield;
     }
   }
 
   Color _colorForType(String type) {
     switch (type) {
-      case 'Life Insurance': return Colors.pink;
       case 'Health Insurance': return Colors.green;
       case 'Motor Insurance': return Colors.orange;
-      case 'WC Insurance': return Colors.purple;
+      case 'Life Insurance': return Colors.pink;
+      case 'Travel Insurance': return Colors.blue;
+      case 'Home Insurance': return Colors.amber.shade700;
+      case 'Business Insurance': return Colors.indigo;
+      case 'Shop / Commercial': return Colors.orangeAccent.shade700;
+      case 'Two Wheeler': return Colors.purple;
+      case 'Accident Insurance': return Colors.redAccent;
+      case 'Term Insurance': return Colors.teal;
       default: return Colors.blueGrey;
     }
   }

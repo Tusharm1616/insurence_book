@@ -24,8 +24,10 @@ class _AddLeadScreenState extends ConsumerState<AddLeadScreen> {
   DateTime? _followupDate;
 
   final List<String> _insuranceTypes = [
-    'Life Insurance', 'Health Insurance', 'Motor Insurance',
-    'WC Insurance', 'Other Insurance',
+    'Health Insurance', 'Motor Insurance', 'Life Insurance',
+    'Travel Insurance', 'Home Insurance', 'Business Insurance',
+    'Shop / Commercial', 'Two Wheeler', 'Accident Insurance',
+    'Term Insurance'
   ];
 
   final List<String> _sources = [

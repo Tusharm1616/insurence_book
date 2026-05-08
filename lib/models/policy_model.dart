@@ -51,10 +51,24 @@ class Policy {
     );
   }
 
+  String get mappedPolicyType {
+    if (policyType.startsWith('Motor Insurance')) return 'Motor';
+    if (policyType == 'Health Insurance') return 'Health';
+    if (policyType == 'Life Insurance') return 'Life';
+    if (policyType == 'Travel Insurance') return 'Travel';
+    if (policyType == 'Home Insurance') return 'Home';
+    if (policyType == 'Business Insurance') return 'Business';
+    if (policyType == 'Shop / Commercial') return 'Shop/Commercial';
+    if (policyType == 'Two Wheeler') return 'Two Wheeler';
+    if (policyType == 'Accident Insurance') return 'Accident';
+    if (policyType == 'Term Insurance') return 'Term';
+    return policyType;
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'customer_id': customerId,
-      'policy_type': policyType,
+      'policy_type': mappedPolicyType,
       'policy_number': policyNumber,
       'insurer_name': insuranceCompany,
       'plan_name': 'Default Plan',
@@ -63,6 +77,7 @@ class Policy {
       'issue_date': startDate.toIso8601String().split('T').first,
       'expiry_date': expiryDate.toIso8601String().split('T').first,
       'status': isExpired ? 'Expired' : 'Active',
+      'extra_data': extraData,
     };
   }
 }
