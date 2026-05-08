@@ -14,7 +14,11 @@ class NotificationService {
     tz.initializeTimeZones();
 
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings(
+          '@mipmap/ic_launcher',
+          requestExactAlarms: true,
+          requestFullIntentPendingIntent: true,
+        );
 
     const DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings(
@@ -63,8 +67,9 @@ class NotificationService {
       body: 'You may have upcoming birthdays or anniversaries to wish today!',
       scheduledDate: scheduledDate,
       notificationDetails: platformDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.exactAndAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
+      uiLocalNotificationDate: scheduledDate,
     );
   }
 }
