@@ -15,7 +15,7 @@ from utils.auth import verify_password, get_password_hash, create_access_token, 
 from models.users import User, UserRole
 
 from fastapi.middleware.cors import CORSMiddleware
-from routes import auth, customers, policies, dashboard, life_insurance, reminders, motor
+from routes import auth, customers, policies, dashboard, life_insurance, reminders, motor, two_wheeler
 
 # Rate limiting configuration
 limiter = Limiter(key_func=get_remote_address)
@@ -221,6 +221,7 @@ app.include_router(dashboard.router)
 app.include_router(life_insurance.router)
 app.include_router(reminders.router)
 app.include_router(motor.router)
+app.include_router(two_wheeler.router)
 
 @app.get("/")
 @limiter.limit("100/minute")

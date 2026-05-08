@@ -1,11 +1,24 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import date
+from enum import Enum
+
+class PolicyType(str, Enum):
+    LIFE = "Life"
+    HEALTH = "Health"
+    MOTOR = "Motor"
+    TWO_WHEELER = "Two Wheeler"
+    TRAVEL = "Travel"
+    HOME = "Home"
+    BUSINESS = "Business"
+    SHOP_COMMERCIAL = "Shop/Commercial"
+    ACCIDENT = "Accident"
+    TERM = "Term"
 
 class PolicyBase(BaseModel):
     customer_id: int
     policy_number: str
-    policy_type: str
+    policy_type: PolicyType
     insurer_name: str
     plan_name: str
     sum_assured: float
