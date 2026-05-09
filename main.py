@@ -258,6 +258,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(auth.api_auth_router)
 app.include_router(customers.router)
 app.include_router(policies.router)
 app.include_router(dashboard.router)

@@ -127,3 +127,23 @@ async def clear_all_users(db: AsyncSession = Depends(get_db)):
     await db.execute(text("TRUNCATE TABLE users RESTART IDENTITY CASCADE"))
     await db.commit()
     return {"message": "All users deleted successfully"}
+
+from utils.auth import get_current_user
+from pydantic import BaseModel
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+@api_auth_router.post("/change-password")
+async def change_password(
+    req: ChangePasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not verify_password(req.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    
+    current_user.hashed_password = get_password_hash(req.new_password)
+    await db.commit()
+    return {"message": "Password changed successfully"}
