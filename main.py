@@ -270,16 +270,48 @@ app.include_router(add_policy.router)
 app.include_router(vehicle.router)
 app.include_router(terms.router)
 
+from datetime import datetime
+
 @app.get("/")
 @limiter.limit("100/minute")
 def read_root(request):
-    return {"message": "Welcome to InsureBook API", "version": "2.0.0"}
+    return {
+        "message": "Welcome to InsureBook API",
+        "version": "2.1.0",
+        "docs": "/docs",
+        "health": "/health"
+    }
 
 @app.get("/health")
 @limiter.limit("200/minute")
 def health_check(request):
-    return {"status": "healthy", "service": "InsureBook API"}
+    return {
+        "status": "healthy",
+        "service": "InsureBook API",
+        "version": "2.1.0",
+        "timestamp": datetime.utcnow().isoformat() + "Z"
+    }
+
+@app.get("/api/version")
+@limiter.limit("100/minute")
+def get_version(request):
+    return {
+        "api_version": "2.1.0",
+        "min_app_version": "1.0.0",
+        "build": "2026.05.10",
+        "features": {
+            "motor_calculator": True,
+            "life_insurance_reports": True,
+            "whatsapp_reminders": True,
+            "terms_conditions": True,
+            "change_password": True,
+            "dark_mode": True,
+            "vehicle_lookup": True,
+            "lead_management": True,
+        },
+        "maintenance_mode": False,
+        "contact_support": "support@insurebook.in"
+    }
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-# Trigger deployment 4
