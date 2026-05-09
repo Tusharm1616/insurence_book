@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy.future import select
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from models.users import User, UserRole
@@ -56,13 +57,14 @@ api_auth_router = APIRouter(prefix="/api/auth", tags=["API Authentication"])
 
 @api_auth_router.post("/register", response_model=RegisterResponse)
 async def api_register_agent(user_in: AgentRegister, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where((User.username == user_in.email) | (User.email == user_in.email)))
+    email = user_in.email.lower()
+    result = await db.execute(select(User).where((func.lower(User.username) == email) | (func.lower(User.email) == email)))
     if result.scalars().first():
         raise HTTPException(status_code=400, detail="User with this email already exists")
     
     new_user = User(
-        username=user_in.email, # Using email as username for this flow
-        email=user_in.email,
+        username=email, # Using lowercase email as username for this flow
+        email=email,
         full_name=user_in.name,
         phone=user_in.phone,
         license_no=user_in.license_no,
@@ -85,12 +87,13 @@ async def api_register_agent(user_in: AgentRegister, db: AsyncSession = Depends(
 
 @api_auth_router.post("/login", response_model=LoginResponse)
 async def api_login(login_data: AgentLogin, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == login_data.email))
+    email = login_data.email.lower()
+    result = await db.execute(select(User).where(func.lower(User.email) == email))
     user = result.scalars().first()
     
     # Fallback to checking username if email wasn't matched
     if not user:
-        result = await db.execute(select(User).where(User.username == login_data.email))
+        result = await db.execute(select(User).where(func.lower(User.username) == email))
         user = result.scalars().first()
         
     if not user or not verify_password(login_data.password, user.hashed_password):
@@ -111,7 +114,8 @@ async def api_login(login_data: AgentLogin, db: AsyncSession = Depends(get_db)):
 @api_auth_router.post("/forgot-password")
 async def api_forgot_password(request: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
     # In a real app, this would send an email. For now, we simulate it.
-    result = await db.execute(select(User).where(User.email == request.email))
+    email = request.email.lower()
+    result = await db.execute(select(User).where(func.lower(User.email) == email))
     user = result.scalars().first()
     
     # Always return "Reset link sent" for security reasons (don't leak if email exists)

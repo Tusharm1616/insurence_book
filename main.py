@@ -15,7 +15,7 @@ from utils.auth import verify_password, get_password_hash, create_access_token, 
 from models.users import User, UserRole
 
 from fastapi.middleware.cors import CORSMiddleware
-from routes import auth, customers, policies, dashboard, life_insurance, reminders, motor, two_wheeler, add_policy
+from routes import auth, customers, policies, dashboard, life_insurance, reminders, motor, two_wheeler, add_policy, vehicle, terms
 
 # Rate limiting configuration
 limiter = Limiter(key_func=get_remote_address)
@@ -40,6 +40,8 @@ async def init_db():
                     "ALTER TABLE policies RENAME COLUMN renewal_date TO premium_due_date;",
                     "ALTER TABLE policies ADD COLUMN IF NOT EXISTS ncb_percent FLOAT DEFAULT 0.0;",
                     "ALTER TABLE policies ADD COLUMN IF NOT EXISTS vehicle_reg_no VARCHAR(20);",
+                    "ALTER TABLE customers ADD COLUMN IF NOT EXISTS date_of_birth DATE;",
+                    "ALTER TABLE customers ADD COLUMN IF NOT EXISTS anniversary_date DATE;",
                     # Motor insurance tables creation
                     """
                     CREATE TABLE IF NOT EXISTS motor_insurance_policies (
@@ -143,6 +145,38 @@ async def init_db():
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                     """,
+                    """
+                    CREATE TABLE IF NOT EXISTS vehicle_document_cache (
+                        id SERIAL PRIMARY KEY,
+                        registration_number VARCHAR(20) UNIQUE NOT NULL,
+                        documents JSONB NOT NULL,
+                        fetched_at TIMESTAMP DEFAULT NOW(),
+                        expires_at TIMESTAMP NOT NULL,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    );
+                    """,
+                    """
+                    CREATE TABLE IF NOT EXISTS motor_quote_history (
+                        id SERIAL PRIMARY KEY,
+                        agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                        customer_name VARCHAR(100),
+                        vehicle_type VARCHAR(20),
+                        vehicle_reg_no VARCHAR(20),
+                        year_of_manufacture INTEGER,
+                        cc_category VARCHAR(20),
+                        fuel_type VARCHAR(20),
+                        idv DECIMAL(12,2),
+                        ncb_percent DECIMAL(5,2),
+                        addons JSONB,
+                        od_premium DECIMAL(10,2),
+                        tp_premium DECIMAL(10,2),
+                        addons_total DECIMAL(10,2),
+                        gst DECIMAL(10,2),
+                        total_premium DECIMAL(10,2),
+                        pdf_url TEXT,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    );
+                    """,
                     # Indexes
                     "CREATE INDEX IF NOT EXISTS ix_customers_agent_id ON customers(agent_id);",
                     "CREATE INDEX IF NOT EXISTS ix_customers_agent_dob ON customers(agent_id, dob);",
@@ -167,6 +201,16 @@ async def init_db():
                     "CREATE INDEX IF NOT EXISTS ix_motor_quotes_customer_id ON motor_insurance_quotes(customer_id);",
                     "CREATE INDEX IF NOT EXISTS ix_motor_quotes_number ON motor_insurance_quotes(quote_number);",
                     "CREATE INDEX IF NOT EXISTS ix_motor_quotes_status ON motor_insurance_quotes(status);",
+                    "CREATE INDEX IF NOT EXISTS ix_motor_quote_history_agent_id ON motor_quote_history(agent_id);",
+                    """
+                    CREATE TABLE IF NOT EXISTS terms_conditions (
+                        id SERIAL PRIMARY KEY,
+                        title VARCHAR(255) DEFAULT 'Terms and Conditions',
+                        version VARCHAR(50) DEFAULT '1.0.0',
+                        content JSONB NOT NULL,
+                        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                    );
+                    """,
                     "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
                 ]
                 
@@ -216,6 +260,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(auth.api_auth_router)
 app.include_router(customers.router)
+app.include_router(customers.api_customers_router)
 app.include_router(policies.router)
 app.include_router(dashboard.router)
 app.include_router(life_insurance.router)
@@ -223,6 +268,8 @@ app.include_router(reminders.router)
 app.include_router(motor.router)
 app.include_router(two_wheeler.router)
 app.include_router(add_policy.router)
+app.include_router(vehicle.router)
+app.include_router(terms.router)
 
 @app.get("/")
 @limiter.limit("100/minute")
