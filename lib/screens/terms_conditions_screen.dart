@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:shimmer/shimmer.dart';
 import '../providers/terms_provider.dart';
 import '../models/terms_model.dart';
 
@@ -401,25 +400,6 @@ class _TermsConditionsScreenState extends ConsumerState<TermsConditionsScreen> {
             style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildShimmer() {
-    return Shimmer.fromColors(
-      baseColor: Colors.grey.shade200,
-      highlightColor: Colors.grey.shade50,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: 8,
-        itemBuilder: (_, _) => Container(
-          height: 70,
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
       ),
     );
   }

@@ -150,14 +150,14 @@ class DashboardScreen extends ConsumerWidget {
                       const SizedBox(width: 12),
                       Expanded(child: GestureDetector(
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerPolicyScreen(customerName: 'Expired Policies'))),
-                        child: _buildInfoCard('Overdue Premium', '$expiredCount policies with overdue payments', LucideIcons.alertCircle, Colors.red),
+                        child: _buildInfoCard(context, 'Overdue Premium', '$expiredCount policies with overdue payments', LucideIcons.alertCircle, Colors.red),
                       )),
                     ],
                   ),
 
                   // ── Life Insurance Report ────────────────────────
                   const SizedBox(height: 24),
-                  _buildSectionHeader('Life Insurance Report', LucideIcons.clipboardList),
+                  _buildSectionHeader(context, 'Life Insurance Report', LucideIcons.clipboardList),
                   const SizedBox(height: 12),
                   Consumer(
                     builder: (context, ref, child) {
@@ -172,7 +172,7 @@ class DashboardScreen extends ConsumerWidget {
 
                   // ── Other Features ───────────────────────────────
                   const SizedBox(height: 24),
-                  _buildSectionHeader('Other Features', LucideIcons.moreHorizontal),
+                  _buildSectionHeader(context, 'Other Features', LucideIcons.moreHorizontal),
                   const SizedBox(height: 12),
                   _buildFeatureRow(context, 'Vehicle Document Validity', 'RTO Document Status & Expiry', LucideIcons.car, Colors.teal, route: '/vehicle_document'),
                   _buildFeatureRow(context, 'Customers Birthday', 'Customers birthday reminders', LucideIcons.cake, Colors.pink, route: '/reminders', routeArgs: {'type': 'birthdays'}),
