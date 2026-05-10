@@ -31,7 +31,7 @@ class Policy {
 
   bool get isExpiringSoon => !isExpired && daysToExpiry <= 30;
 
-  bool get isLifeInsurance => policyType == 'Life Insurance';
+  bool get isLifeInsurance => policyType == 'Life Insurance' || policyType == 'Life';
 
   String get statusLabel {
     if (isExpired) return 'EXPIRED';
@@ -44,10 +44,10 @@ class Policy {
       id: json['id'],
       customerId: json['customer_id'],
       policyType: json['policy_type'] ?? json['insurance_type'] ?? 'Other',
-      policyNumber: json['policy_number'],
-      insuranceCompany: json['insurer_name'],
-      sumInsured: (json['sum_assured'] as num).toDouble(),
-      premium: (json['premium_amount'] as num).toDouble(),
+      policyNumber: json['policy_number'] ?? '',
+      insuranceCompany: json['insurer_name'] ?? 'Unknown',
+      sumInsured: (json['sum_assured'] as num?)?.toDouble() ?? 0.0,
+      premium: (json['premium_amount'] as num?)?.toDouble() ?? 0.0,
       startDate: DateTime.parse(json['issue_date']),
       expiryDate: DateTime.parse(json['expiry_date']),
       status: (json['status'] as String? ?? 'live').toLowerCase(),

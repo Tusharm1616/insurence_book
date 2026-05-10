@@ -4,6 +4,9 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../models/policy_model.dart';
 import '../providers/policy_provider.dart';
 import '../providers/customer_provider.dart';
+import '../providers/dashboard_provider.dart';
+import '../providers/life_report_provider.dart';
+import '../providers/expiring_policies_provider.dart';
 
 class AddPolicyWizard extends ConsumerStatefulWidget {
   final String policyType;
@@ -175,6 +178,11 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
     try {
       await ref.read(policyProvider.notifier).addPolicy(policy);
       if (!mounted) return;
+      
+      // Invalidate dashboard counts so they refresh automatically
+      ref.invalidate(expiringCountsProvider);
+      ref.invalidate(lifeReportProvider);
+      ref.invalidate(expiringPoliciesProvider);
 
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Row(children: [Icon(Icons.check_circle, color: Colors.white), SizedBox(width: 8), Text('Policy saved successfully!')]),

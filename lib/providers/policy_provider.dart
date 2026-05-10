@@ -14,7 +14,15 @@ class PolicyNotifier extends Notifier<List<Policy>> {
     try {
       final response = await apiService.dio.get('/policies/');
       final data = response.data as List;
-      state = data.map((json) => Policy.fromJson(json)).toList();
+      final List<Policy> loaded = [];
+      for (var json in data) {
+        try {
+          loaded.add(Policy.fromJson(json));
+        } catch (e) {
+          debugPrint('Failed to parse a policy: $e, Data: $json');
+        }
+      }
+      state = loaded;
     } catch (e) {
       debugPrint('Error fetching policies: $e');
     }
