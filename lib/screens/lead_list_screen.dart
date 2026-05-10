@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 
+import '../core/theme.dart';
 import '../providers/lead_provider.dart';
 
 class LeadListScreen extends ConsumerWidget {
@@ -17,19 +18,19 @@ class LeadListScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0.5,
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
       ),
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: leads.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(LucideIcons.inbox, size: 48, color: Colors.grey.shade400),
+                  Icon(LucideIcons.inbox, size: 48, color: Theme.of(context).dividerColor),
                   const SizedBox(height: 16),
-                  const Text('No Leads Found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black54)),
+                  Text('No Leads Found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyMedium?.color)),
                 ],
               ),
             )
@@ -37,7 +38,7 @@ class LeadListScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               itemCount: leads.length,
               itemBuilder: (context, index) {
-                final lead = leads[index];
+                final Lead lead = leads[index];
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   elevation: 1,
@@ -55,9 +56,9 @@ class LeadListScreen extends ConsumerWidget {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(LucideIcons.phone, size: 12, color: Colors.grey),
+                            const Icon(LucideIcons.phone, size: 12, color: AppColors.navInactive),
                             const SizedBox(width: 4),
-                            Text(lead.mobile, style: const TextStyle(color: Colors.grey)),
+                            Text(lead.mobile, style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color)),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -74,7 +75,7 @@ class LeadListScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
-                    trailing: const Icon(LucideIcons.chevronRight, size: 18, color: Colors.grey),
+                    trailing: Icon(LucideIcons.chevronRight, size: 18, color: Theme.of(context).dividerColor),
                     onTap: () {
                       // Optionally open a lead details bottom sheet here
                     },
