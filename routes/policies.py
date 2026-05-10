@@ -51,8 +51,8 @@ async def list_policies(
     if current_user.role != UserRole.AGENT:
         raise HTTPException(status_code=403, detail="Access denied")
         
-    # Get all policies for customers managed by this agent
+    # Get all policies created by this agent directly
     result = await db.execute(
-        select(Policy).join(Customer).where(Customer.agent_id == current_user.id)
+        select(Policy).where(Policy.agent_id == current_user.id)
     )
     return result.scalars().all()

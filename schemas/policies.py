@@ -1,32 +1,19 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import date
-from enum import Enum
-
-class PolicyType(str, Enum):
-    LIFE = "Life"
-    HEALTH = "Health"
-    MOTOR = "Motor"
-    TWO_WHEELER = "Two Wheeler"
-    TRAVEL = "Travel"
-    HOME = "Home"
-    BUSINESS = "Business"
-    SHOP_COMMERCIAL = "Shop/Commercial"
-    ACCIDENT = "Accident"
-    TERM = "Term"
 
 class PolicyBase(BaseModel):
     customer_id: int
     policy_number: str
-    policy_type: PolicyType
-    insurer_name: str
-    plan_name: str
-    sum_assured: float
-    premium_amount: float
+    policy_type: str  # Accept any string, not just enum values
+    insurer_name: Optional[str] = None
+    plan_name: Optional[str] = None
+    sum_assured: Optional[float] = 0.0
+    premium_amount: Optional[float] = 0.0
     issue_date: date
     expiry_date: date
     premium_due_date: Optional[date] = None
-    status: str = "Active"
+    status: str = "live"
     maturity_date: Optional[date] = None
     ncb_percent: Optional[float] = 0.0
     vehicle_reg_no: Optional[str] = None
@@ -36,7 +23,7 @@ class PolicyCreate(PolicyBase):
 
 class PolicyResponse(PolicyBase):
     id: int
-    agent_id: int
+    agent_id: Optional[int] = None
 
     class Config:
         from_attributes = True
