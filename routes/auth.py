@@ -147,3 +147,13 @@ async def change_password(
     current_user.hashed_password = get_password_hash(req.new_password)
     await db.commit()
     return {"message": "Password changed successfully"}
+
+@api_auth_router.get("/profile", response_model=AgentResponse)
+async def get_profile(current_user: User = Depends(get_current_user)):
+    return AgentResponse(
+        id=current_user.id,
+        name=current_user.full_name,
+        email=current_user.email or current_user.username,
+        license_no=current_user.license_no
+    )
+
