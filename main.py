@@ -18,7 +18,7 @@ from utils.auth import verify_password, get_password_hash, create_access_token, 
 from models.users import User, UserRole
 
 from fastapi.middleware.cors import CORSMiddleware
-from routes import auth, customers, policies, dashboard, life_insurance, reminders, motor, two_wheeler, add_policy, vehicle, terms
+from routes import auth, customers, policies, dashboard, life_insurance, reminders, motor, two_wheeler, add_policy, vehicle, terms, vehicle_documents
 
 # Rate limiting configuration
 limiter = Limiter(key_func=get_remote_address)
@@ -213,6 +213,34 @@ async def init_db():
                     "CREATE INDEX IF NOT EXISTS ix_motor_quotes_customer_id ON motor_insurance_quotes(customer_id);",
                     "CREATE INDEX IF NOT EXISTS ix_motor_quotes_number ON motor_insurance_quotes(quote_number);",
                     "CREATE INDEX IF NOT EXISTS ix_motor_quotes_status ON motor_insurance_quotes(status);",
+                    """
+                    CREATE TABLE IF NOT EXISTS vehicle_documents (
+                        id SERIAL PRIMARY KEY,
+                        agent_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+                        vehicle_number VARCHAR(20) NOT NULL,
+                        vehicle_type VARCHAR(50) NOT NULL,
+                        vehicle_model VARCHAR(100) NOT NULL,
+                        manufacturer VARCHAR(100) NOT NULL,
+                        fuel_type VARCHAR(30) NOT NULL,
+                        registration_year INTEGER,
+                        insurance_expiry DATE,
+                        puc_expiry DATE,
+                        rc_expiry DATE,
+                        license_expiry DATE,
+                        fitness_expiry DATE,
+                        reminder_sent BOOLEAN DEFAULT FALSE,
+                        notes TEXT,
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP DEFAULT NOW()
+                    );
+                    """,
+                    "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_agent_id ON vehicle_documents(agent_id);",
+                    "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_customer_id ON vehicle_documents(customer_id);",
+                    "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_vehicle_number ON vehicle_documents(vehicle_number);",
+                    "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_insurance_expiry ON vehicle_documents(insurance_expiry);",
+                    "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_puc_expiry ON vehicle_documents(puc_expiry);",
+                    # Indexes
                     "CREATE INDEX IF NOT EXISTS ix_motor_quote_history_agent_id ON motor_quote_history(agent_id);"
                 ]
                 
@@ -295,6 +323,7 @@ app.include_router(two_wheeler.router)
 app.include_router(add_policy.router)
 app.include_router(vehicle.router)
 app.include_router(terms.router)
+app.include_router(vehicle_documents.router)
 
 from datetime import datetime
 

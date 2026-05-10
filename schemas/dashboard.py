@@ -25,3 +25,23 @@ class ExpiringListResponse(BaseModel):
     total: int
     page: int
     limit: int
+
+class ExpiredPolicyItem(BaseModel):
+    policy_id: int
+    policy_number: str
+    policy_type: str
+    insurer_name: Optional[str] = None
+    premium_amount: Optional[float] = None
+    expiry_date: Optional[date] = None
+    days_overdue: int
+    customer_full_name: str
+    customer_phone_number: str
+
+    class Config:
+        from_attributes = True
+
+class ExpiredListResponse(BaseModel):
+    items: List[ExpiredPolicyItem]
+    total: int
+    page: int
+    limit: int

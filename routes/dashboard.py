@@ -9,7 +9,7 @@ from database import get_db
 from models.users import User
 from models.policies import Policy
 from models.customers import Customer
-from schemas.dashboard import ExpiringCountResponse, ExpiringPolicyItem, ExpiringListResponse
+from schemas.dashboard import ExpiringCountResponse, ExpiringPolicyItem, ExpiringListResponse, ExpiredPolicyItem, ExpiredListResponse
 from utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
@@ -90,6 +90,73 @@ async def get_expiring_list(
         ))
         
     return ExpiringListResponse(
+        items=items,
+        total=total,
+        page=page,
+        limit=limit
+    )
+
+@router.get("/expired-count")
+async def get_expired_count(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    current_date = date.today()
+    query = select(func.count(Policy.id)).where(
+        and_(
+            Policy.agent_id == current_user.id,
+            Policy.expiry_date < current_date,
+        )
+    )
+    result = await db.execute(query)
+    count = result.scalar() or 0
+    return {"count": count}
+
+@router.get("/expired-list", response_model=ExpiredListResponse)
+async def get_expired_list(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    current_date = date.today()
+    offset = (page - 1) * limit
+
+    query = select(Policy, Customer).join(Customer, Policy.customer_id == Customer.id).where(
+        and_(
+            Policy.agent_id == current_user.id,
+            Policy.expiry_date < current_date,
+        )
+    )
+
+    count_query = select(func.count(Policy.id)).where(
+        and_(
+            Policy.agent_id == current_user.id,
+            Policy.expiry_date < current_date,
+        )
+    )
+    count_result = await db.execute(count_query)
+    total = count_result.scalar() or 0
+
+    query = query.order_by(Policy.expiry_date.desc()).offset(offset).limit(limit)
+    result = await db.execute(query)
+
+    items = []
+    for policy, customer in result.all():
+        days_overdue = (current_date - policy.expiry_date).days if policy.expiry_date else 0
+        items.append(ExpiredPolicyItem(
+            policy_id=policy.id,
+            policy_number=policy.policy_number,
+            policy_type=policy.policy_type,
+            insurer_name=policy.insurer_name,
+            premium_amount=policy.premium_amount,
+            expiry_date=policy.expiry_date,
+            days_overdue=days_overdue,
+            customer_full_name=customer.full_name,
+            customer_phone_number=customer.mobile_number
+        ))
+
+    return ExpiredListResponse(
         items=items,
         total=total,
         page=page,

@@ -25,6 +25,8 @@ class Policy(Base):
     sum_assured = Column(Float)
     ncb_percent = Column(Float, default=0.0)
     vehicle_reg_no = Column(String(20))
+    nominee_name = Column(String(100), nullable=True)
+    nominee_relation = Column(String(50), nullable=True)
     
     # Relationships
     customer = relationship("Customer", back_populates="policies")
