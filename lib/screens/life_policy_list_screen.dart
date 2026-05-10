@@ -4,6 +4,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../providers/life_policy_list_provider.dart';
+import 'life_policy_detail_screen.dart';
 
 class LifePolicyListScreen extends ConsumerStatefulWidget {
   final String filter;
@@ -100,81 +101,174 @@ class _LifePolicyListScreenState extends ConsumerState<LifePolicyListScreen> {
       );
     }
 
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: state.policies.length + (state.hasMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == state.policies.length) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-        
-        final policy = state.policies[index];
-        return _buildPolicyCard(policy);
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+          child: Text('${state.policies.length} policies found', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+        ),
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            itemCount: state.policies.length + (state.hasMore ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == state.policies.length) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              
+              final policy = state.policies[index];
+              return _buildPolicyCard(policy);
+            },
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildPolicyCard(LifePolicy policy) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 2,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          decoration: BoxDecoration(
-            border: Border(left: BorderSide(color: widget.themeColor, width: 6)),
-            color: Colors.white,
-          ),
-          padding: const EdgeInsets.all(16),
+    int daysUntilExpiry = 0;
+    bool isExpiringSoon = false;
+    
+    if (policy.premiumDueDate != null) {
+      try {
+        final dueDate = DateTime.parse(policy.premiumDueDate!);
+        daysUntilExpiry = dueDate.difference(DateTime.now()).inDays;
+        isExpiringSoon = daysUntilExpiry <= 30 && daysUntilExpiry >= 0;
+      } catch (e) {
+        // format error
+      }
+    }
+
+    String sumAssuredStr = policy.sumAssured != null ? '₹${(policy.sumAssured! / 100000).toStringAsFixed(0)}L' : 'N/A';
+    String premiumStr = policy.premiumAmount != null ? '₹${policy.premiumAmount!.toStringAsFixed(0)}/yr' : 'N/A';
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (_) => LifePolicyDetailScreen(policy: policy)));
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Header
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: widget.themeColor.withValues(alpha: 0.1), shape: BoxShape.circle),
+                    child: Icon(LucideIcons.heart, color: widget.themeColor, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(policy.policyNumber, style: TextStyle(color: widget.themeColor, fontWeight: FontWeight.bold, fontSize: 13)),
+                        const SizedBox(height: 2),
+                        Text(policy.customerName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(color: widget.themeColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+                        child: Text(policy.status, style: TextStyle(color: widget.themeColor, fontWeight: FontWeight.bold, fontSize: 11)),
+                      ),
+                      const SizedBox(height: 4),
+                      const Icon(LucideIcons.chevronRight, color: Colors.grey, size: 18),
+                    ],
+                  ),
+                ],
+              ),
+              const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1)),
+              
+              // Details Grid
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(
-                      policy.customerName,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      overflow: TextOverflow.ellipsis,
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _detailRow(LucideIcons.shield, policy.insurerName ?? 'N/A'),
+                        const SizedBox(height: 8),
+                        _detailRow(LucideIcons.calendar, 'Due: ${policy.premiumDueDate ?? 'N/A'}'),
+                        const SizedBox(height: 8),
+                        _detailRow(LucideIcons.award, 'Sum Assured: $sumAssuredStr'),
+                      ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: widget.themeColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      policy.status.toUpperCase(),
-                      style: TextStyle(color: widget.themeColor, fontWeight: FontWeight.bold, fontSize: 10),
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _detailRow(LucideIcons.phone, policy.customerPhone),
+                        const SizedBox(height: 8),
+                        _detailRow(LucideIcons.dollarSign, premiumStr),
+                      ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text('Policy No: ${policy.policyNumber}', style: const TextStyle(color: Colors.black87)),
-              const SizedBox(height: 4),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Insurer: ${policy.insurerName ?? 'N/A'}', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-                  Text('Premium: ₹${policy.premiumAmount ?? 0}', style: const TextStyle(fontWeight: FontWeight.w600)),
-                ],
-              ),
-              if (policy.maturityDate != null) ...[
-                const SizedBox(height: 4),
-                Text('Maturity: ${policy.maturityDate}', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+              
+              // Alert Banner
+              if (isExpiringSoon || policy.status.toLowerCase() == 'lapsed') ...[
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(LucideIcons.alertCircle, color: Colors.red, size: 14),
+                      const SizedBox(width: 6),
+                      Text(
+                        policy.status.toLowerCase() == 'lapsed' 
+                          ? 'Policy has lapsed — Action needed'
+                          : 'Expires in $daysUntilExpiry days — Renewal needed',
+                        style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _detailRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: Colors.grey.shade500),
+        const SizedBox(width: 6),
+        Expanded(child: Text(text, style: const TextStyle(color: Colors.black54, fontSize: 13))),
+      ],
     );
   }
 

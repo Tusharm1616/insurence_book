@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../main.dart';
 
 class ApiService {
   final Dio _dio = Dio();
@@ -26,6 +28,16 @@ class ApiService {
           if (e.response?.statusCode == 401) {
             // Token expired — clear token and force re-login
             await _storage.delete(key: 'access_token');
+            if (navigatorKey.currentState != null && navigatorKey.currentContext != null) {
+              ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+                const SnackBar(
+                  content: Text('Session expired. Please log in again.'),
+                  backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+              navigatorKey.currentState!.pushNamedAndRemoveUntil('/login', (route) => false);
+            }
           }
           return handler.next(e);
         },

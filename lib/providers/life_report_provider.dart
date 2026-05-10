@@ -31,6 +31,6 @@ class LifeReportSummary {
 }
 
 final lifeReportProvider = FutureProvider<LifeReportSummary>((ref) async {
-  final res = await apiService.dio.get('/life-insurance/report-summary');
+  final res = await apiService.dio.get('/api/life-insurance/report-summary');
   return LifeReportSummary.fromJson(res.data);
 });

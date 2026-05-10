@@ -3,7 +3,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import '../core/theme.dart';
 import 'dashboard_screen.dart';
 import 'lead_screen.dart';
-import 'search_screen.dart';
+import 'reports_screen.dart';
 import 'setting_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -19,7 +19,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   final List<Widget> _screens = [
     const DashboardScreen(),
     const LeadScreen(),
-    const SearchScreen(),
+    const ReportsScreen(),
     const SettingScreen(),
   ];
 
@@ -38,8 +38,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         unselectedLabelStyle: const TextStyle(fontSize: 12),
         items: const [
           BottomNavigationBarItem(icon: Icon(LucideIcons.layoutGrid), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(LucideIcons.barChart2), label: 'Lead'),
-          BottomNavigationBarItem(icon: Icon(LucideIcons.search), label: 'Search'),
+          BottomNavigationBarItem(icon: Icon(LucideIcons.target), label: 'Lead'),
+          BottomNavigationBarItem(icon: Icon(LucideIcons.pieChart), label: 'Reports'),
           BottomNavigationBarItem(icon: Icon(LucideIcons.settings), label: 'Setting'),
         ],
       ),

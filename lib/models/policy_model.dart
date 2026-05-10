@@ -8,6 +8,7 @@ class Policy {
   final double premium;
   final DateTime startDate;
   final DateTime expiryDate;
+  final String status; // 'live', 'pending', 'expired', etc.
   final Map<String, String> extraData;
 
   Policy({
@@ -20,6 +21,7 @@ class Policy {
     required this.premium,
     required this.startDate,
     required this.expiryDate,
+    this.status = 'live',
     this.extraData = const {},
   });
 
@@ -48,6 +50,7 @@ class Policy {
       premium: (json['premium_amount'] as num).toDouble(),
       startDate: DateTime.parse(json['issue_date']),
       expiryDate: DateTime.parse(json['expiry_date']),
+      status: (json['status'] as String? ?? 'live').toLowerCase(),
     );
   }
 
@@ -76,8 +79,7 @@ class Policy {
       'premium_amount': premium,
       'issue_date': startDate.toIso8601String().split('T').first,
       'expiry_date': expiryDate.toIso8601String().split('T').first,
-      'status': isExpired ? 'Expired' : 'Active',
-      'extra_data': extraData,
+      'status': status.toLowerCase(),
     };
   }
 }

@@ -168,6 +168,7 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
       premium: double.tryParse(_totalPremiumCtrl.text) ?? 0,
       startDate: _startDate,
       expiryDate: _expiryDate!,
+      status: _status.toLowerCase(),
       extraData: extraData,
     );
 

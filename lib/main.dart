@@ -8,6 +8,7 @@ import 'screens/auth/forgot_password_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'screens/customer_list_screen.dart';
 import 'screens/create_customer_screen.dart';
+import 'screens/change_password_screen.dart';
 import 'screens/add_policy_type_screen.dart';
 import 'screens/customer_policy_screen.dart';
 import 'screens/add_lead_screen.dart';
@@ -17,11 +18,16 @@ import 'providers/lead_provider.dart';
 import 'screens/bank_details_screen.dart';
 import 'screens/contact_us_screen.dart';
 import 'screens/banner_screen.dart';
-import 'screens/generic_placeholder_screen.dart';
+
 import 'screens/expiring_policies_screen.dart';
 import 'screens/life_policy_list_screen.dart';
 import 'screens/reminders_screen.dart';
 import 'services/notification_service.dart';
+import 'screens/vehicle_document_screen.dart';
+import 'screens/motor_calculator_screen.dart';
+import 'screens/terms_conditions_screen.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,15 +43,19 @@ void main() async {
   );
 }
 
-class InsureBookApp extends StatelessWidget {
+class InsureBookApp extends ConsumerWidget {
   const InsureBookApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeProvider);
     return MaterialApp(
       title: 'InsureBook',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
+      navigatorKey: navigatorKey,
       initialRoute: '/',
       routes: {
         '/':                 (context) => const SplashScreen(),
@@ -57,13 +67,14 @@ class InsureBookApp extends StatelessWidget {
         '/create_customer':  (context) => const CreateCustomerScreen(),
         '/add_policy':       (context) => const AddPolicyTypeScreen(),
         '/all_policies':     (context) => const CustomerPolicyScreen(),
+        '/vehicle_document': (context) => const VehicleDocumentScreen(),
         '/motor_calculator': (context) => const MotorCalculatorScreen(),
         '/add_lead':         (context) => const AddLeadScreen(),
         '/bank_details':     (context) => const BankDetailsScreen(),
         '/contact_us':       (context) => const ContactUsScreen(),
         '/banner_settings':  (context) => const BannerScreen(),
-        '/change_password':  (context) => const GenericPlaceholderScreen(title: 'Change Password'),
-        '/terms':            (context) => const GenericPlaceholderScreen(title: 'Terms & Conditions'),
+        '/change_password':  (context) => const ChangePasswordScreen(),
+        '/terms':            (context) => const TermsConditionsScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/expiring_policies') {
@@ -103,11 +114,3 @@ class InsureBookApp extends StatelessWidget {
   }
 }
 
-class MotorCalculatorScreen extends StatelessWidget {
-  const MotorCalculatorScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Motor Calculator')));
-  }
-}

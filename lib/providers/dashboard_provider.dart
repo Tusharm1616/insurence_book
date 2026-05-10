@@ -8,8 +8,8 @@ class ExpiringCounts {
 }
 
 final expiringCountsProvider = FutureProvider<ExpiringCounts>((ref) async {
-  final res1 = await apiService.dio.get('/dashboard/expiring-count', queryParameters: {'days': 30});
-  final res2 = await apiService.dio.get('/dashboard/expiring-count', queryParameters: {'days': 60});
+  final res1 = await apiService.dio.get('/api/dashboard/expiring-count', queryParameters: {'days': 30});
+  final res2 = await apiService.dio.get('/api/dashboard/expiring-count', queryParameters: {'days': 60});
   
   return ExpiringCounts(
     month1: res1.data['count'] ?? 0,

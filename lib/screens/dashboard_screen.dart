@@ -6,7 +6,9 @@ import '../providers/customer_provider.dart';
 import '../providers/policy_provider.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/life_report_provider.dart';
+import '../providers/auth_provider.dart';
 import '../screens/customer_policy_screen.dart';
+import 'global_search_delegate.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -33,12 +35,28 @@ class DashboardScreen extends ConsumerWidget {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(LucideIcons.search),
+            onPressed: () {
+              showSearch(context: context, delegate: GlobalSearchDelegate(ref));
+            },
+          ),
+          IconButton(
+            icon: const Icon(LucideIcons.bell),
+            onPressed: () {},
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: SingleChildScrollView(
+              child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildWelcomeCard(),
+            _buildWelcomeCard(ref),
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -156,7 +174,7 @@ class DashboardScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   _buildSectionHeader('Other Features', LucideIcons.moreHorizontal),
                   const SizedBox(height: 12),
-                  _buildFeatureRow(context, 'Vehicle Document Validity', 'RTO Document Status & Expiry', LucideIcons.car, Colors.teal),
+                  _buildFeatureRow(context, 'Vehicle Document Validity', 'RTO Document Status & Expiry', LucideIcons.car, Colors.teal, route: '/vehicle_document'),
                   _buildFeatureRow(context, 'Customers Birthday', 'Customers birthday reminders', LucideIcons.cake, Colors.pink, route: '/reminders', routeArgs: {'type': 'birthdays'}),
                   _buildFeatureRow(context, 'Customers Anniversary', 'Customers anniversary reminders', LucideIcons.heart, Colors.red, route: '/reminders', routeArgs: {'type': 'anniversaries'}),
                   _buildFeatureRow(context, 'Motor Insurance Calculator', 'Calculate premium & generate PDF quotes', LucideIcons.calculator, Colors.purple, route: '/motor_calculator'),
@@ -167,31 +185,108 @@ class DashboardScreen extends ConsumerWidget {
           ],
         ),
       ),
+      ),
+      ),
+      ),
     );
   }
 
-  Widget _buildWelcomeCard() {
+  Widget _buildWelcomeCard(WidgetRef ref) {
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
+    
+    final hour = DateTime.now().hour;
+    String greeting;
+    if (hour < 12) {
+      greeting = 'Good Morning';
+    } else if (hour < 17) {
+      greeting = 'Good Afternoon';
+    } else {
+      greeting = 'Good Evening';
+    }
+
+    final name = user?.fullName ?? 'Agent';
+    final role = (user?.role ?? 'Agent').toUpperCase();
+    final initials = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'A';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.secondary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.secondary.withValues(alpha: 0.2)),
-      ),
-      child: Row(children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-          child: const Icon(LucideIcons.user, color: AppColors.primary, size: 30),
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        const SizedBox(width: 16),
-        const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Welcome back,', style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-          Text('John Doe', style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
-        ]),
-      ]),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Stack(
+            children: [
+              CircleAvatar(
+                radius: 30,
+                backgroundColor: Colors.white,
+                child: Text(
+                  initials,
+                  style: const TextStyle(color: AppColors.primary, fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: Colors.greenAccent.shade400,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.primary, width: 2),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  greeting,
+                  style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  name,
+                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    role,
+                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

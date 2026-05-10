@@ -80,7 +80,7 @@ class ExpiringPoliciesNotifier extends Notifier<ExpiringPoliciesState> {
   Future<void> fetchInitial(int days) async {
     state = state.copyWith(isLoading: true, error: null, page: 1, hasMore: true);
     try {
-      final res = await apiService.dio.get('/dashboard/expiring-list', queryParameters: {
+      final res = await apiService.dio.get('/api/dashboard/expiring-list', queryParameters: {
         'days': days,
         'page': 1,
         'limit': 20,
@@ -102,7 +102,7 @@ class ExpiringPoliciesNotifier extends Notifier<ExpiringPoliciesState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final nextPage = state.page + 1;
-      final res = await apiService.dio.get('/dashboard/expiring-list', queryParameters: {
+      final res = await apiService.dio.get('/api/dashboard/expiring-list', queryParameters: {
         'days': days,
         'page': nextPage,
         'limit': 20,

@@ -83,7 +83,7 @@ class LifePoliciesNotifier extends Notifier<LifePoliciesState> {
   Future<void> fetchInitial(String filter) async {
     state = state.copyWith(isLoading: true, error: null, page: 1, hasMore: true);
     try {
-      final res = await apiService.dio.get('/life-insurance/policies', queryParameters: {
+      final res = await apiService.dio.get('/api/life-insurance/policies', queryParameters: {
         'filter': filter,
         'page': 1,
         'limit': 20,
@@ -105,7 +105,7 @@ class LifePoliciesNotifier extends Notifier<LifePoliciesState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final nextPage = state.page + 1;
-      final res = await apiService.dio.get('/life-insurance/policies', queryParameters: {
+      final res = await apiService.dio.get('/api/life-insurance/policies', queryParameters: {
         'filter': filter,
         'page': nextPage,
         'limit': 20,
