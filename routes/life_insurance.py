@@ -58,7 +58,7 @@ async def get_report_summary(
             COUNT(*) FILTER (WHERE LOWER(status) = 'matured') as matured_count,
             COUNT(*) FILTER (WHERE LOWER(status) = 'lapsed') as lapsed_count
         FROM policies
-        WHERE agent_id = :agent_id AND policy_type ILIKE 'life%'
+        WHERE agent_id = :agent_id
     """)
     
     result = await db.execute(query, {
@@ -97,7 +97,6 @@ async def get_life_policies(
     # Build base conditions
     base_conditions = [
         Policy.agent_id == current_user.id,
-        Policy.policy_type.ilike('life%'),
     ]
 
     # Filter-specific conditions
