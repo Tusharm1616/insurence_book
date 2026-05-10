@@ -5,7 +5,6 @@ import '../core/theme.dart';
 import '../providers/customer_provider.dart';
 import '../providers/policy_provider.dart';
 import '../providers/dashboard_provider.dart';
-import '../providers/life_report_provider.dart';
 import '../providers/auth_provider.dart';
 import '../screens/customer_policy_screen.dart';
 import 'global_search_delegate.dart';
