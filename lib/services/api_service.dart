@@ -25,7 +25,8 @@ class ApiService {
           return handler.next(options);
         },
         onError: (e, handler) async {
-          if (e.response?.statusCode == 401) {
+          // Ignore 401s from the login endpoint (e.g. wrong password)
+          if (e.response?.statusCode == 401 && !e.requestOptions.path.contains('/login')) {
             // Token expired — clear token and force re-login
             await _storage.delete(key: 'access_token');
             if (navigatorKey.currentState != null && navigatorKey.currentContext != null) {
