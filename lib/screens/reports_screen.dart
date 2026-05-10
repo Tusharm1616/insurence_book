@@ -24,7 +24,7 @@ class ReportsScreen extends ConsumerWidget {
               children: [
                 const SizedBox(height: 10),
                 const Text(
-                  'Life Insurance Report',
+                  'All Policies Report',
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1A1D26)),
                 ),
                 const SizedBox(height: 4),

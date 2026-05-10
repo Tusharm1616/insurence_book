@@ -77,7 +77,7 @@ class _TermsConditionsScreenState extends ConsumerState<TermsConditionsScreen> {
         elevation: 0,
       ),
       body: termsAsync.when(
-        loading: () => _buildShimmer(),
+        loading: () => _buildFallbackTerms(), // Show fallback terms immediately for "instant" load
         error: (e, _) => _buildFallbackTerms(),
         data: (terms) => _buildTermsBody(terms),
       ),
