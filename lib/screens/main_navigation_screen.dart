@@ -31,6 +31,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
+        backgroundColor: Theme.of(context).cardColor,
         selectedItemColor: AppColors.navActive,
         unselectedItemColor: AppColors.navInactive,
         showUnselectedLabels: true,

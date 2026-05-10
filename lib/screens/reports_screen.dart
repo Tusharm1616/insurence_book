@@ -12,7 +12,7 @@ class ReportsScreen extends ConsumerWidget {
     final reportAsync = ref.watch(lifeReportProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () => ref.refresh(lifeReportProvider.future),
@@ -23,19 +23,30 @@ class ReportsScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'All Policies Report',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1A1D26)),
+                  style: TextStyle(
+                    fontSize: 24, 
+                    fontWeight: FontWeight.bold, 
+                    color: Theme.of(context).textTheme.displayLarge?.color
+                  ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Tap a tile to view detailed list',
-                  style: TextStyle(fontSize: 14, color: Colors.blueGrey),
+                  style: TextStyle(
+                    fontSize: 14, 
+                    color: Theme.of(context).textTheme.bodyMedium?.color
+                  ),
                 ),
                 const SizedBox(height: 24),
-                const Text(
+                Text(
                   'Policy Overview',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A1D26)),
+                  style: TextStyle(
+                    fontSize: 18, 
+                    fontWeight: FontWeight.bold, 
+                    color: Theme.of(context).textTheme.displayLarge?.color
+                  ),
                 ),
                 const SizedBox(height: 16),
                 reportAsync.when(

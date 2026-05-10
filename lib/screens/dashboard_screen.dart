@@ -298,7 +298,7 @@ class DashboardScreen extends ConsumerWidget {
         child: Icon(icon, size: 16, color: AppColors.primary),
       ),
       const SizedBox(width: 8),
-      Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+      Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.displayLarge?.color)),
     ]);
   }
 
@@ -344,7 +344,7 @@ class DashboardScreen extends ConsumerWidget {
           const SizedBox(height: 12),
           Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 2),
           const SizedBox(height: 4),
-          Text(sub, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+          Text(sub, style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodyMedium?.color)),
         ]),
       ),
     );
@@ -391,7 +391,11 @@ class DashboardScreen extends ConsumerWidget {
   Widget _buildFeatureRow(BuildContext context, String title, String sub, IconData icon, Color color, {String? route, Map<String, dynamic>? routeArgs}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor, 
+        borderRadius: BorderRadius.circular(12), 
+        border: Border.all(color: Theme.of(context).dividerColor)
+      ),
       child: ListTile(
         onTap: () { if (route != null) Navigator.pushNamed(context, route, arguments: routeArgs); },
         leading: Container(
@@ -400,7 +404,7 @@ class DashboardScreen extends ConsumerWidget {
           child: Icon(icon, color: color, size: 24),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        subtitle: Text(sub, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        subtitle: Text(sub, style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color)),
         trailing: const Icon(LucideIcons.chevronRight, size: 18, color: Colors.grey),
       ),
     );

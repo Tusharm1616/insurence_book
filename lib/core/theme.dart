@@ -113,14 +113,21 @@ class ThemeNotifier extends Notifier<ThemeMode> {
 
   @override
   ThemeMode build() {
+    // Initial build returns light, but we trigger an async load
     _loadFromStorage();
     return ThemeMode.light;
   }
 
   Future<void> _loadFromStorage() async {
-    final saved = await _storage.read(key: _key);
-    if (saved == 'dark') {
-      state = ThemeMode.dark;
+    try {
+      final saved = await _storage.read(key: _key);
+      if (saved == 'dark') {
+        state = ThemeMode.dark;
+      } else if (saved == 'light') {
+        state = ThemeMode.light;
+      }
+    } catch (_) {
+      // Fallback to light
     }
   }
 

@@ -161,7 +161,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: () => setState(() => _searchQuery = ''))
               : null,
-          fillColor: Colors.white,
+          fillColor: Theme.of(context).cardColor,
           filled: true,
           contentPadding: EdgeInsets.zero,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -214,10 +214,10 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(customer.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(
-                  '${customer.gender ?? 'N/A'} • ${customer.city ?? customer.state ?? 'N/A'}',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
+                  Text(
+                    '${customer.gender ?? 'N/A'} • ${customer.city ?? customer.state ?? 'N/A'}',
+                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 12),
+                  ),
               ])),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -240,9 +240,9 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
               const SizedBox(width: 8),
               Expanded(child: Text(customer.mobileNumber, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15))),
               if (customer.email != null && customer.email!.isNotEmpty) ...[
-                const Icon(LucideIcons.mail, size: 14, color: Colors.grey),
+                const Icon(LucideIcons.mail, size: 14, color: AppColors.navInactive),
                 const SizedBox(width: 4),
-                Flexible(child: Text(customer.email!, style: const TextStyle(color: Colors.grey, fontSize: 12), overflow: TextOverflow.ellipsis)),
+                Flexible(child: Text(customer.email!, style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 12), overflow: TextOverflow.ellipsis)),
               ],
             ]),
 
@@ -250,11 +250,11 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
             if ((customer.state != null && customer.state!.isNotEmpty) || (customer.city != null && customer.city!.isNotEmpty)) ...[
               const SizedBox(height: 8),
               Row(children: [
-                const Icon(LucideIcons.mapPin, size: 14, color: Colors.grey),
+                const Icon(LucideIcons.mapPin, size: 14, color: AppColors.navInactive),
                 const SizedBox(width: 6),
                 Text(
                   [customer.city, customer.state].where((e) => e != null && e.isNotEmpty).join(', '),
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                  style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 13),
                 ),
               ]),
             ],
@@ -314,7 +314,12 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
   Widget _buildCredentialsBox(Customer customer) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark 
+            ? Colors.white.withValues(alpha: 0.05) 
+            : Colors.grey.shade100, 
+        borderRadius: BorderRadius.circular(8)
+      ),
       child: Row(children: [
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
