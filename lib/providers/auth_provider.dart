@@ -23,7 +23,34 @@ class AuthState {
 
 class AuthNotifier extends Notifier<AuthState> {
   @override
-  AuthState build() => AuthState();
+  AuthState build() {
+    // Attempt to initialize on build
+    Future.microtask(() => initialize());
+    return AuthState();
+  }
+
+  Future<void> initialize() async {
+    final token = await apiService.getToken();
+    if (token == null) return;
+
+    state = state.copyWith(isLoading: true);
+    try {
+      final response = await apiService.dio.get('/api/auth/profile');
+      final agentData = response.data;
+      final user = UserProfile(
+        id: agentData['id'],
+        username: agentData['email'],
+        fullName: agentData['name'],
+        role: 'agent',
+        email: agentData['email'],
+      );
+      state = state.copyWith(user: user, isLoading: false);
+    } catch (e) {
+      // If profile fetch fails, token might be invalid
+      await apiService.clearToken();
+      state = AuthState();
+    }
+  }
 
   Future<void> login(String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);

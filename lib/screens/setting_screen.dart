@@ -55,6 +55,9 @@ class _SettingScreenState extends ConsumerState<SettingScreen> {
   Widget build(BuildContext context) {
     final isDarkMode = ref.watch(themeProvider) == ThemeMode.dark;
 
+    final authState = ref.watch(authProvider);
+    final user = authState.user;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -82,34 +85,45 @@ class _SettingScreenState extends ConsumerState<SettingScreen> {
                   ),
                 ],
               ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 32,
-                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                    child: const Icon(LucideIcons.user, size: 32, color: AppColors.primary),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+              child: authState.isLoading 
+                ? const Center(child: CircularProgressIndicator())
+                : Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 32,
+                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                        child: const Icon(LucideIcons.user, size: 32, color: AppColors.primary),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Tushar Mhargude', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)),
-                            const SizedBox(width: 8),
-                            const Icon(Icons.verified, color: Colors.blue, size: 18),
+                            Row(
+                              children: [
+                                Text(
+                                  user?.fullName ?? 'Agent Name', 
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.bodyLarge?.color)
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.verified, color: Colors.blue, size: 18),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Agent ID: AGT-2026-${user?.id ?? "???"}', 
+                              style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600)
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              user?.email ?? user?.username ?? 'email@example.com', 
+                              style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 13)
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        const Text('Agent ID: AGT-2026-901', style: TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 2),
-                        Text('tusharmhargude8@gmail.com', style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 13)),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
             ),
             const SizedBox(height: 24),
 
