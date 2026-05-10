@@ -21,12 +21,13 @@ class CustomerNotifier extends Notifier<AsyncValue<List<Customer>>> {
     }
   }
 
-  Future<void> addCustomer(Customer customer) async {
+  Future<Customer> addCustomer(Customer customer) async {
     try {
       final response = await apiService.dio.post('/customers/', data: customer.toJson());
       final newCustomer = Customer.fromJson(response.data);
       final current = state.asData?.value ?? [];
       state = AsyncValue.data([...current, newCustomer]);
+      return newCustomer;
     } catch (e) {
       debugPrint('Failed to add customer: $e');
       rethrow;

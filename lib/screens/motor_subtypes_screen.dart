@@ -3,7 +3,14 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'add_policy_wizard.dart'; // We will create this next
 
 class MotorSubtypesScreen extends StatelessWidget {
-  const MotorSubtypesScreen({super.key});
+  final int? prefilledCustomerId;
+  final String? prefilledCustomerName;
+
+  const MotorSubtypesScreen({
+    super.key,
+    this.prefilledCustomerId,
+    this.prefilledCustomerName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -108,6 +115,8 @@ class MotorSubtypesScreen extends StatelessWidget {
                   color: tagColor,
                   icon: icon,
                   isMotor: true,
+                  prefilledCustomerId: prefilledCustomerId,
+                  prefilledCustomerName: prefilledCustomerName,
                 ),
               ),
             );

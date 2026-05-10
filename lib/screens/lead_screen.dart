@@ -25,7 +25,7 @@ class LeadScreen extends ConsumerWidget {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: AppThemeHelper.scaffoldBg(context),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,7 +92,7 @@ class LeadScreen extends ConsumerWidget {
                 children: [
                   const Icon(LucideIcons.zap, size: 20, color: AppColors.primary),
                   const SizedBox(width: 8),
-                  const Text('Lead Actions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                  Text('Lead Actions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppThemeHelper.textPrimary(context))),
                 ],
               ),
             ),
@@ -126,11 +126,11 @@ class LeadScreen extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppThemeHelper.cardColor(context),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
+          border: Border.all(color: AppThemeHelper.borderColor(context)),
+          boxShadow: AppThemeHelper.isDark(context) ? [] : [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 2)),
           ],
         ),
         child: Column(
@@ -157,7 +157,7 @@ class LeadScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 6),
-            Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500)),
+            Text(title, style: TextStyle(fontSize: 12, color: AppThemeHelper.textSecondary(context), fontWeight: FontWeight.w500)),
           ],
         ),
       ),
@@ -168,11 +168,11 @@ class LeadScreen extends ConsumerWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppThemeHelper.cardColor(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.01), blurRadius: 4, offset: const Offset(0, 2)),
+        border: Border.all(color: AppThemeHelper.borderColor(context)),
+        boxShadow: AppThemeHelper.isDark(context) ? [] : [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
         ],
       ),
       child: ListTile(
@@ -180,7 +180,7 @@ class LeadScreen extends ConsumerWidget {
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Colors.blue.shade50,
+            color: AppColors.primary.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: AppColors.primary, size: 22),

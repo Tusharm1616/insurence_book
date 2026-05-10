@@ -20,10 +20,11 @@ import 'screens/contact_us_screen.dart';
 import 'screens/banner_screen.dart';
 
 import 'screens/expiring_policies_screen.dart';
+import 'screens/expired_policies_screen.dart';
 import 'screens/life_policy_list_screen.dart';
 import 'screens/reminders_screen.dart';
 import 'services/notification_service.dart';
-import 'screens/vehicle_document_screen.dart';
+import 'screens/vehicle_docs/vehicle_docs_screen.dart';
 import 'screens/motor_calculator_screen.dart';
 import 'screens/terms_conditions_screen.dart';
 
@@ -67,7 +68,7 @@ class InsureBookApp extends ConsumerWidget {
         '/create_customer':  (context) => const CreateCustomerScreen(),
         '/add_policy':       (context) => const AddPolicyTypeScreen(),
         '/all_policies':     (context) => const CustomerPolicyScreen(),
-        '/vehicle_document': (context) => const VehicleDocumentScreen(),
+        '/vehicle_document': (context) => const VehicleDocsScreen(),
         '/motor_calculator': (context) => const MotorCalculatorScreen(),
         '/add_lead':         (context) => const AddLeadScreen(),
         '/bank_details':     (context) => const BankDetailsScreen(),
@@ -75,6 +76,7 @@ class InsureBookApp extends ConsumerWidget {
         '/banner_settings':  (context) => const BannerScreen(),
         '/change_password':  (context) => const ChangePasswordScreen(),
         '/terms':            (context) => const TermsConditionsScreen(),
+        '/expired_policies': (context) => const ExpiredPoliciesScreen(),
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/expiring_policies') {

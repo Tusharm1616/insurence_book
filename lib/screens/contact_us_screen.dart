@@ -9,7 +9,9 @@ class ContactUsScreen extends StatelessWidget {
 
   void _copyToClipboard(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied to clipboard'), duration: Duration(seconds: 1)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Copied to clipboard'), duration: Duration(seconds: 1)),
+    );
   }
 
   Future<void> _launchUrl(BuildContext context, String urlString, {bool isWhatsApp = false}) async {
@@ -19,12 +21,16 @@ class ContactUsScreen extends StatelessWidget {
         await launchUrl(url, mode: isWhatsApp ? LaunchMode.externalApplication : LaunchMode.platformDefault);
       } else {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not perform this action. App may not be installed.'), backgroundColor: Colors.red));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not perform this action. App may not be installed.'), backgroundColor: Colors.red),
+          );
         }
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -37,50 +43,59 @@ class ContactUsScreen extends StatelessWidget {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: AppThemeHelper.scaffoldBg(context),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Main 24x7 Agent Support
+            const SizedBox(height: 4),
+            Text(
+              'Get in Touch',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppThemeHelper.textPrimary(context)),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'We\'re here to help you 24×7',
+              style: TextStyle(fontSize: 13, color: AppThemeHelper.textSecondary(context)),
+            ),
+            const SizedBox(height: 20),
             _contactCard(
               context,
               icon: LucideIcons.phoneCall,
               color: AppColors.primary,
-              title: '24x7 Agent Support',
+              title: '24×7 Agent Support',
               label: 'Primary Number',
               value: '+91 84595 31212',
               actionIcon: LucideIcons.phone,
               onActionTap: () => _launchUrl(context, 'tel:+918459531212'),
               secondaryActionIcon: Icons.wechat,
-              onSecondaryActionTap: () => _launchUrl(context, 'whatsapp://send?phone=918459531212', isWhatsApp: true),
+              onSecondaryActionTap: () =>
+                  _launchUrl(context, 'whatsapp://send?phone=918459531212', isWhatsApp: true),
             ),
             const SizedBox(height: 16),
-            
-            // Email Support
             _contactCard(
               context,
               icon: LucideIcons.mail,
               color: Colors.blue,
-              title: 'Email',
+              title: 'Email Support',
               label: 'General Queries',
               value: 'support@insurebook.com',
               actionIcon: LucideIcons.mail,
               onActionTap: () => _launchUrl(context, 'mailto:support@insurebook.com'),
             ),
             const SizedBox(height: 16),
-            
-            // Address
             _contactCard(
               context,
               icon: LucideIcons.mapPin,
               color: Colors.orange,
-              title: 'Address',
+              title: 'Office Address',
               label: 'Head Office',
               value: '123 Business Hub, Pune, Maharashtra',
               actionIcon: LucideIcons.navigation,
-              onActionTap: () {}, // Can launch maps if needed
+              onActionTap: () {},
             ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -99,8 +114,16 @@ class ContactUsScreen extends StatelessWidget {
     IconData? secondaryActionIcon,
     VoidCallback? onSecondaryActionTap,
   }) {
+    final isDark = AppThemeHelper.isDark(context);
     return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.grey.shade200)),
+      decoration: BoxDecoration(
+        color: AppThemeHelper.cardColor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppThemeHelper.borderColor(context)),
+        boxShadow: isDark
+            ? []
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 3))],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -110,52 +133,76 @@ class ContactUsScreen extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   child: Icon(icon, color: color, size: 24),
                 ),
                 const SizedBox(width: 12),
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(
+                  title,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppThemeHelper.textPrimary(context)),
+                ),
               ],
             ),
           ),
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16))),
+            decoration: BoxDecoration(
+              color: AppThemeHelper.surfaceColor(context),
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Icon(actionIcon != null ? label.contains('Support') ? LucideIcons.headphones : icon : icon, color: Colors.grey, size: 14),
+                    Icon(icon, color: AppThemeHelper.iconMuted(context), size: 14),
                     const SizedBox(width: 6),
-                    Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+                    Text(label, style: TextStyle(color: AppThemeHelper.textSecondary(context), fontSize: 12, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                    Expanded(
+                      child: Text(
+                        value,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppThemeHelper.textPrimary(context)),
+                      ),
+                    ),
                     if (actionIcon != null) ...[
                       IconButton(
                         onPressed: onActionTap,
                         icon: Icon(actionIcon, color: AppColors.primary, size: 18),
-                        style: IconButton.styleFrom(backgroundColor: AppColors.primary.withValues(alpha: 0.1), shape: const CircleBorder()),
+                        style: IconButton.styleFrom(
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                          shape: const CircleBorder(),
+                        ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 4),
                     ],
                     if (secondaryActionIcon != null) ...[
                       IconButton(
                         onPressed: onSecondaryActionTap,
                         icon: Icon(secondaryActionIcon, color: Colors.green.shade600, size: 18),
-                        style: IconButton.styleFrom(backgroundColor: Colors.green.withValues(alpha: 0.1), shape: const CircleBorder()),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.green.withValues(alpha: 0.1),
+                          shape: const CircleBorder(),
+                        ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 4),
                     ],
                     IconButton(
                       onPressed: () => _copyToClipboard(context, value),
-                      icon: const Icon(LucideIcons.copy, color: Colors.blueGrey, size: 18),
-                      style: IconButton.styleFrom(backgroundColor: Colors.white, shape: const CircleBorder(), side: BorderSide(color: Colors.grey.shade300)),
+                      icon: Icon(LucideIcons.copy, color: AppThemeHelper.textSecondary(context), size: 18),
+                      style: IconButton.styleFrom(
+                        backgroundColor: AppThemeHelper.surfaceColor(context),
+                        shape: const CircleBorder(),
+                        side: BorderSide(color: AppThemeHelper.borderColor(context)),
+                      ),
                     ),
                   ],
                 ),

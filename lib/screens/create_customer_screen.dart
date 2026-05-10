@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../models/customer_model.dart';
 import '../providers/customer_provider.dart';
+import 'customer_options_screen.dart';
 
 class CreateCustomerScreen extends ConsumerStatefulWidget {
   const CreateCustomerScreen({super.key});
@@ -66,7 +67,7 @@ class _CreateCustomerScreenState extends ConsumerState<CreateCustomerScreen> {
     );
 
     try {
-      await ref.read(customerProvider.notifier).addCustomer(newCustomer);
+      final savedCustomer = await ref.read(customerProvider.notifier).addCustomer(newCustomer);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -76,7 +77,13 @@ class _CreateCustomerScreenState extends ConsumerState<CreateCustomerScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
-      Navigator.pop(context);
+      // Redirect to Customer Options screen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CustomerOptionsScreen(customer: savedCustomer),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save customer: $e'), backgroundColor: Colors.red));

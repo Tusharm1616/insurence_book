@@ -57,12 +57,13 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
   // -- Step 3: Policy --
   final _policyNoCtrl = TextEditingController();
   String? _insuranceCompany;
+  final _sumInsuredCtrl = TextEditingController();
   final _tpPremiumCtrl = TextEditingController();
   final _totalPremiumCtrl = TextEditingController();
   DateTime _startDate = DateTime.now();
   DateTime? _expiryDate;
   String _paymentFreq = 'Annually';
-  String _status = 'Live';
+  String _status = 'Active';
   final _nomineeCtrl = TextEditingController();
   final _relationCtrl = TextEditingController();
 
@@ -94,6 +95,7 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
     _engineNoCtrl.dispose();
     _chassisNoCtrl.dispose();
     _policyNoCtrl.dispose();
+    _sumInsuredCtrl.dispose();
     _tpPremiumCtrl.dispose();
     _totalPremiumCtrl.dispose();
     _nomineeCtrl.dispose();
@@ -165,13 +167,15 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
       id: DateTime.now().millisecondsSinceEpoch,
       customerId: _selectedCustomerId,
       policyType: widget.policyType,
-      policyNumber: _policyNoCtrl.text.trim(),
+      policyNumber: _policyNoCtrl.text.trim(), // backend auto-generates if blank/random
       insuranceCompany: _insuranceCompany ?? 'Unknown',
-      sumInsured: 0.0, // Simplification based on new design
-      premium: double.tryParse(_totalPremiumCtrl.text) ?? 0,
+      sumInsured: double.tryParse(_sumInsuredCtrl.text.replaceAll(',', '')) ?? 0.0,
+      premium: double.tryParse(_totalPremiumCtrl.text.replaceAll(',', '')) ?? 0,
       startDate: _startDate,
       expiryDate: _expiryDate!,
       status: _status.toLowerCase(),
+      nomineeName: _nomineeCtrl.text.trim().isNotEmpty ? _nomineeCtrl.text.trim() : null,
+      nomineeRelation: _relationCtrl.text.trim().isNotEmpty ? _relationCtrl.text.trim() : null,
       extraData: extraData,
     );
 
@@ -540,16 +544,22 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader('Policy Details', 'Enter premium & policy info'),
-          
-          _label('Policy Number', isRequired: true),
-          TextFormField(controller: _policyNoCtrl, decoration: _inputDeco(hint: 'e.g. POL-2025-001'), validator: (v) => v!.isEmpty ? 'Required' : null),
+
+          _label('Policy Number', isOptional: true),
+          TextFormField(
+            controller: _policyNoCtrl,
+            decoration: _inputDeco(hint: 'e.g. LIC-2026-LF-1001 (auto-generated if blank)'),
+          ),
 
           _label('Insurance Company', isRequired: true),
           DropdownButtonFormField<String>(
             initialValue: _insuranceCompany,
             decoration: _inputDeco(),
             hint: const Text('Select Company'),
-            items: ['ICICI Lombard', 'HDFC Ergo', 'Star Health', 'Bajaj Allianz', 'SBI General'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            isExpanded: true,
+            items: kInsuranceCompanies
+                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .toList(),
             onChanged: (v) => setState(() => _insuranceCompany = v!),
             validator: (v) => v == null ? 'Required' : null,
           ),
@@ -565,8 +575,17 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Premium Breakdown', style: TextStyle(color: widget.color, fontWeight: FontWeight.bold, fontSize: 14)),
+                Text('Financial Details', style: TextStyle(color: widget.color, fontWeight: FontWeight.bold, fontSize: 14)),
                 const SizedBox(height: 12),
+                const Text('Sum Insured / Assured (₹) *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _sumInsuredCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: _inputDeco(hint: 'e.g. 500000', isWhite: true),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Sum insured is required' : null,
+                ),
+                const SizedBox(height: 16),
                 if (widget.isMotor) ...[
                   const Text('Third Party Premium (₹)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                   const SizedBox(height: 8),
@@ -575,11 +594,16 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
                 ],
                 const Text('Total Premium (₹) *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                 const SizedBox(height: 8),
-                TextFormField(controller: _totalPremiumCtrl, keyboardType: TextInputType.number, decoration: _inputDeco(hint: 'Total premium payable', isWhite: true), validator: (v) => v!.isEmpty ? 'Required' : null),
+                TextFormField(
+                  controller: _totalPremiumCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: _inputDeco(hint: 'Total premium payable', isWhite: true),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                ),
               ],
             ),
           ),
-          
+
           const SizedBox(height: 16),
           _label('Policy Start Date', isRequired: true),
           _dateCard('Policy Start Date', _startDate, (d) => setState(() => _startDate = d)),
@@ -591,15 +615,19 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
           DropdownButtonFormField<String>(
             initialValue: _paymentFreq,
             decoration: _inputDeco(),
-            items: ['Annually', 'Half-Yearly', 'Quarterly', 'Monthly'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            items: ['Annually', 'Half-Yearly', 'Quarterly', 'Monthly']
+                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .toList(),
             onChanged: (v) => setState(() => _paymentFreq = v!),
           ),
 
-          _label('Status'),
+          _label('Policy Status'),
           DropdownButtonFormField<String>(
             initialValue: _status,
             decoration: _inputDeco(),
-            items: ['Live', 'Pending', 'Expired'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            items: ['Active', 'Pending', 'Lapsed', 'Matured', 'Cancelled']
+                .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                .toList(),
             onChanged: (v) => setState(() => _status = v!),
           ),
 
@@ -607,7 +635,7 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
           TextFormField(controller: _nomineeCtrl, decoration: _inputDeco(hint: 'Nominee full name')),
 
           _label('Nominee Relation', isOptional: true),
-          TextFormField(controller: _relationCtrl, decoration: _inputDeco(hint: 'e.g. Spouse')),
+          TextFormField(controller: _relationCtrl, decoration: _inputDeco(hint: 'e.g. Spouse, Son, Daughter')),
         ],
       ),
     );

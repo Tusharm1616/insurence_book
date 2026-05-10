@@ -5,6 +5,7 @@ import '../core/theme.dart';
 import '../providers/customer_provider.dart';
 import '../providers/policy_provider.dart';
 import '../providers/dashboard_provider.dart';
+import '../providers/expired_policies_provider.dart';
 import '../providers/auth_provider.dart';
 import '../screens/customer_policy_screen.dart';
 import 'global_search_delegate.dart';
@@ -17,13 +18,17 @@ class DashboardScreen extends ConsumerWidget {
     // Live counts from providers
     final customers    = ref.watch(customerProvider).asData?.value ?? [];
     final policies     = ref.watch(policyProvider);
-    final expired      = ref.watch(expiredPoliciesProvider);
+    final expiredAsync = ref.watch(expiredCountProvider);
     final lifePolicies = ref.watch(lifeInsurancePoliciesProvider);
 
     final totalCustomers  = customers.length;
     final activeCustomers = customers.where((c) => c.isActive).length;
     final totalPolicies   = policies.length;
-    final expiredCount    = expired.length;
+    final expiredCount    = expiredAsync.when(
+      data: (c) => '$c',
+      loading: () => '--',
+      error: (e, _) => '--',
+    );
 
     // Life Insurance Report breakdown
     final expiringSoon      = lifePolicies.where((p) => p.isExpiringSoon).length;
@@ -92,10 +97,8 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   GestureDetector(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(
-                      builder: (_) => const CustomerPolicyScreen(customerName: 'Expired Policies — All'),
-                    )),
-                    child: _buildStatRowCard(context, 'Expired Policy', '$expiredCount', LucideIcons.alertTriangle, Colors.red),
+                    onTap: () => Navigator.pushNamed(context, '/expired_policies'),
+                    child: _buildStatRowCard(context, 'Expired Policy', expiredCount, LucideIcons.alertTriangle, Colors.red),
                   ),
                   const SizedBox(height: 8),
                   
