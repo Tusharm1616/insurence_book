@@ -155,20 +155,6 @@ class DashboardScreen extends ConsumerWidget {
                     ],
                   ),
 
-                  // ── Life Insurance Report ────────────────────────
-                  const SizedBox(height: 24),
-                  _buildSectionHeader(context, 'Life Insurance Report', LucideIcons.clipboardList),
-                  const SizedBox(height: 12),
-                  Consumer(
-                    builder: (context, ref, child) {
-                      final reportAsync = ref.watch(lifeReportProvider);
-                      return reportAsync.when(
-                        data: (report) => _buildGridReport(context, report),
-                        loading: () => const Center(child: CircularProgressIndicator()),
-                        error: (e, st) => const Center(child: Text('Failed to load report')),
-                      );
-                    },
-                  ),
 
                   // ── Other Features ───────────────────────────────
                   const SizedBox(height: 24),
@@ -350,43 +336,6 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildGridReport(BuildContext context, LifeReportSummary report) {
-    final reports = [
-      {'title': 'Live Policy',       'icon': LucideIcons.checkCircle,  'color': Colors.green,      'count': report.live, 'filter': 'live'},
-      {'title': 'Premium Holiday',   'icon': LucideIcons.pauseCircle,  'color': Colors.orange,     'count': report.premiumHoliday, 'filter': 'premium holiday'},
-      {'title': 'Premium Paidup',    'icon': LucideIcons.checkCircle2, 'color': Colors.purple,     'count': report.premiumPaidup, 'filter': 'paidup'},
-      {'title': 'Upcoming Maturity', 'icon': LucideIcons.clock,        'color': Colors.teal,       'count': report.upcomingMaturity, 'filter': 'upcoming maturity'},
-      {'title': 'Matured Policy',    'icon': LucideIcons.calendarCheck,'color': Colors.deepPurple, 'count': report.matured, 'filter': 'matured'},
-      {'title': 'Lapsed Policy',     'icon': LucideIcons.xCircle,      'color': Colors.red,        'count': report.lapsed, 'filter': 'lapsed'},
-    ];
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2, childAspectRatio: 1.4, crossAxisSpacing: 10, mainAxisSpacing: 10,
-      ),
-      itemCount: reports.length,
-      itemBuilder: (context, index) {
-        final r = reports[index];
-        return GestureDetector(
-          onTap: () => Navigator.pushNamed(context, '/life_policies', arguments: {
-            'filter': r['filter'],
-            'title': r['title'],
-            'color': r['color'],
-          }),
-          child: Card(
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(r['icon'] as IconData, color: r['color'] as Color, size: 24),
-              const SizedBox(height: 6),
-              Text('${r['count']}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: r['color'] as Color)),
-              Text(r['title'] as String, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
-            ]),
-          ),
-        );
-      },
-    );
-  }
 
   Widget _buildFeatureRow(BuildContext context, String title, String sub, IconData icon, Color color, {String? route, Map<String, dynamic>? routeArgs}) {
     return Container(
