@@ -9,6 +9,9 @@ from contextlib import asynccontextmanager
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from fastapi.responses import JSONResponse
+from fastapi import Request
+import time
 
 from database import engine, Base, get_db
 from utils.auth import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
@@ -247,6 +250,30 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS configuration
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",") if os.getenv("ALLOWED_ORIGINS") else ["*"]
+
+# Middleware for logging requests
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    # Avoid logging docs/openapi for cleaner logs
+    if not request.url.path.startswith(("/docs", "/openapi.json")):
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] {request.method} {request.url.path} -> {response.status_code} ({process_time:.4f}s)")
+    return response
+
+# Global Exception Handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logging.error(f"Unhandled error: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "An internal server error occurred.",
+            "error_type": str(type(exc).__name__),
+            "timestamp": datetime.utcnow().isoformat()
+        },
+    )
 
 app.add_middleware(
     CORSMiddleware,
