@@ -177,6 +177,15 @@ async def init_db():
                         created_at TIMESTAMP DEFAULT NOW()
                     );
                     """,
+                    """
+                    CREATE TABLE IF NOT EXISTS terms_conditions (
+                        id SERIAL PRIMARY KEY,
+                        title VARCHAR(255) DEFAULT 'Terms and Conditions',
+                        version VARCHAR(50) DEFAULT '1.0.0',
+                        content JSONB NOT NULL,
+                        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                    );
+                    """,
                     # Indexes
                     "CREATE INDEX IF NOT EXISTS ix_customers_agent_id ON customers(agent_id);",
                     "CREATE INDEX IF NOT EXISTS ix_customers_agent_dob ON customers(agent_id, dob);",
@@ -201,17 +210,7 @@ async def init_db():
                     "CREATE INDEX IF NOT EXISTS ix_motor_quotes_customer_id ON motor_insurance_quotes(customer_id);",
                     "CREATE INDEX IF NOT EXISTS ix_motor_quotes_number ON motor_insurance_quotes(quote_number);",
                     "CREATE INDEX IF NOT EXISTS ix_motor_quotes_status ON motor_insurance_quotes(status);",
-                    "CREATE INDEX IF NOT EXISTS ix_motor_quote_history_agent_id ON motor_quote_history(agent_id);",
-                    """
-                    CREATE TABLE IF NOT EXISTS terms_conditions (
-                        id SERIAL PRIMARY KEY,
-                        title VARCHAR(255) DEFAULT 'Terms and Conditions',
-                        version VARCHAR(50) DEFAULT '1.0.0',
-                        content JSONB NOT NULL,
-                        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                    );
-                    """,
-                    "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
+                    "CREATE INDEX IF NOT EXISTS ix_motor_quote_history_agent_id ON motor_quote_history(agent_id);"
                 ]
                 
                 for sql in migrations:
