@@ -157,7 +157,21 @@ class _CreateCustomerScreenState extends ConsumerState<CreateCustomerScreen> {
               _phoneField(),
 
               _label('Email Address', isOptional: true),
-              _textField('Enter email address', _emailCtrl, prefixIcon: LucideIcons.mail, keyboardType: TextInputType.emailAddress),
+              _textField(
+                'Enter email address', 
+                _emailCtrl, 
+                prefixIcon: LucideIcons.mail, 
+                keyboardType: TextInputType.emailAddress,
+                validator: (v) {
+                  if (v != null && v.trim().isNotEmpty) {
+                    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                    if (!emailRegex.hasMatch(v.trim())) {
+                      return 'Enter a valid email address';
+                    }
+                  }
+                  return null;
+                },
+              ),
 
               _label('Date of Birth', isRequired: true),
               _dateCard('Date of Birth', LucideIcons.calendar, _dob, Colors.green, isDob: true),
@@ -212,12 +226,12 @@ class _CreateCustomerScreenState extends ConsumerState<CreateCustomerScreen> {
     );
   }
 
-  Widget _textField(String hint, TextEditingController ctrl, {bool required = false, int maxLines = 1, IconData? prefixIcon, TextInputType? keyboardType}) {
+  Widget _textField(String hint, TextEditingController ctrl, {bool required = false, int maxLines = 1, IconData? prefixIcon, TextInputType? keyboardType, String? Function(String?)? validator}) {
     return TextFormField(
       controller: ctrl,
       maxLines: maxLines,
       keyboardType: keyboardType,
-      validator: required ? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null : null,
+      validator: validator ?? (required ? (v) => (v == null || v.trim().isEmpty) ? 'Required' : null : null),
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
