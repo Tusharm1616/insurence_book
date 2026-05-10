@@ -62,41 +62,41 @@ class DashboardScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   // ── Quick Actions ────────────────────────────────
-                  _buildSectionHeader('Quick Actions', LucideIcons.zap),
+                  _buildSectionHeader(context, 'Quick Actions', LucideIcons.zap),
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(child: GestureDetector(
                         onTap: () => Navigator.pushNamed(context, '/create_customer'),
-                        child: _buildActionCard('Add Customer', LucideIcons.userPlus, Colors.green),
+                        child: _buildActionCard(context, 'Add Customer', LucideIcons.userPlus, Colors.green),
                       )),
                       const SizedBox(width: 12),
                       Expanded(child: GestureDetector(
                         onTap: () => Navigator.pushNamed(context, '/add_policy'),
-                        child: _buildActionCard('Add Policy', LucideIcons.fileText, Colors.blueGrey),
+                        child: _buildActionCard(context, 'Add Policy', LucideIcons.fileText, Colors.blueGrey),
                       )),
                     ],
                   ),
 
                   // ── Statistics Overview ──────────────────────────
                   const SizedBox(height: 24),
-                  _buildSectionHeader('Statistics Overview', LucideIcons.barChart),
+                  _buildSectionHeader(context, 'Statistics Overview', LucideIcons.barChart),
                   const SizedBox(height: 12),
                   GestureDetector(
                     onTap: () => Navigator.pushNamed(context, '/customers'),
-                    child: _buildStatRowCard('All Customer', '$totalCustomers', LucideIcons.users, Colors.blue),
+                    child: _buildStatRowCard(context, 'All Customer', '$totalCustomers', LucideIcons.users, Colors.blue),
                   ),
                   const SizedBox(height: 8),
                   GestureDetector(
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerPolicyScreen())),
-                    child: _buildStatRowCard('All Policy', '$totalPolicies', LucideIcons.shield, Colors.green),
+                    child: _buildStatRowCard(context, 'All Policy', '$totalPolicies', LucideIcons.shield, Colors.green),
                   ),
                   const SizedBox(height: 8),
                   GestureDetector(
                     onTap: () => Navigator.push(context, MaterialPageRoute(
                       builder: (_) => const CustomerPolicyScreen(customerName: 'Expired Policies — All'),
                     )),
-                    child: _buildStatRowCard('Expired Policy', '$expiredCount', LucideIcons.alertTriangle, Colors.red),
+                    child: _buildStatRowCard(context, 'Expired Policy', '$expiredCount', LucideIcons.alertTriangle, Colors.red),
                   ),
                   const SizedBox(height: 8),
                   
@@ -119,12 +119,12 @@ class DashboardScreen extends ConsumerWidget {
                         children: [
                           GestureDetector(
                             onTap: () => Navigator.pushNamed(context, '/expiring_policies', arguments: {'days': 30, 'title': 'Expiring Within 1 Month'}),
-                            child: _buildStatRowCard('Expiring Within 1 Month', count1m, LucideIcons.calendar, const Color(0xFFFF9800)),
+                            child: _buildStatRowCard(context, 'Expiring Within 1 Month', count1m, LucideIcons.calendar, const Color(0xFFFF9800)),
                           ),
                           const SizedBox(height: 8),
                           GestureDetector(
                             onTap: () => Navigator.pushNamed(context, '/expiring_policies', arguments: {'days': 60, 'title': 'Expiring Within 2 Months'}),
-                            child: _buildStatRowCard('Expiring Within 2 Months', count2m, LucideIcons.calendarDays, const Color(0xFFFFC107)),
+                            child: _buildStatRowCard(context, 'Expiring Within 2 Months', count2m, LucideIcons.calendarDays, const Color(0xFFFFC107)),
                           ),
                         ],
                       );
@@ -134,18 +134,18 @@ class DashboardScreen extends ConsumerWidget {
 
                   GestureDetector(
                     onTap: () => Navigator.pushNamed(context, '/customers'),
-                    child: _buildStatRowCard('Active Customers', '$activeCustomers', LucideIcons.userCheck, Colors.teal),
+                    child: _buildStatRowCard(context, 'Active Customers', '$activeCustomers', LucideIcons.userCheck, Colors.teal),
                   ),
 
                   // ── Upcoming Items ───────────────────────────────
                   const SizedBox(height: 24),
-                  _buildSectionHeader('Upcoming Items', LucideIcons.inbox),
+                  _buildSectionHeader(context, 'Upcoming Items', LucideIcons.inbox),
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(child: GestureDetector(
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerPolicyScreen(customerName: 'Upcoming Renewals'))),
-                        child: _buildInfoCard('Upcoming Renewal & Due Premium', 'Policies expiring in 30 days: $expiringSoon', LucideIcons.calendar, Colors.green),
+                        child: _buildInfoCard(context, 'Upcoming Renewal & Due Premium', 'Policies expiring in 30 days: $expiringSoon', LucideIcons.calendar, Colors.green),
                       )),
                       const SizedBox(width: 12),
                       Expanded(child: GestureDetector(
@@ -290,7 +290,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
+  Widget _buildSectionHeader(BuildContext context, String title, IconData icon) {
     return Row(children: [
       Container(
         padding: const EdgeInsets.all(4),
@@ -302,7 +302,7 @@ class DashboardScreen extends ConsumerWidget {
     ]);
   }
 
-  Widget _buildActionCard(String title, IconData icon, Color color) {
+  Widget _buildActionCard(BuildContext context, String title, IconData icon, Color color) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
@@ -319,7 +319,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatRowCard(String title, String count, IconData icon, Color color) {
+  Widget _buildStatRowCard(BuildContext context, String title, String count, IconData icon, Color color) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -335,7 +335,7 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildInfoCard(String title, String sub, IconData icon, Color color) {
+  Widget _buildInfoCard(BuildContext context, String title, String sub, IconData icon, Color color) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
