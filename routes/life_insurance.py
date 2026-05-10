@@ -48,15 +48,15 @@ async def get_report_summary(
     current_date = date.today()
     max_maturity = current_date + timedelta(days=90)
     
-    # Conditional aggregation
+    # Conditional aggregation (case-insensitive, 'active' treated as 'live')
     query = text("""
         SELECT
-            COUNT(*) FILTER (WHERE status = 'live') as live_count,
-            COUNT(*) FILTER (WHERE status = 'premium holiday') as holiday_count,
-            COUNT(*) FILTER (WHERE status = 'paidup') as paidup_count,
-            COUNT(*) FILTER (WHERE status = 'live' AND maturity_date >= :current_date AND maturity_date <= :max_maturity) as upcoming_maturity_count,
-            COUNT(*) FILTER (WHERE status = 'matured') as matured_count,
-            COUNT(*) FILTER (WHERE status = 'lapsed') as lapsed_count
+            COUNT(*) FILTER (WHERE LOWER(status) IN ('live', 'active')) as live_count,
+            COUNT(*) FILTER (WHERE LOWER(status) = 'premium holiday') as holiday_count,
+            COUNT(*) FILTER (WHERE LOWER(status) = 'paidup') as paidup_count,
+            COUNT(*) FILTER (WHERE LOWER(status) IN ('live', 'active') AND maturity_date >= :current_date AND maturity_date <= :max_maturity) as upcoming_maturity_count,
+            COUNT(*) FILTER (WHERE LOWER(status) = 'matured') as matured_count,
+            COUNT(*) FILTER (WHERE LOWER(status) = 'lapsed') as lapsed_count
         FROM policies
         WHERE agent_id = :agent_id AND policy_type ILIKE 'life%'
     """)
@@ -102,10 +102,12 @@ async def get_life_policies(
 
     # Filter-specific conditions
     if filter == 'upcoming maturity':
-        base_conditions.append(Policy.status == 'live')
+        base_conditions.append(func.lower(Policy.status).in_(['live', 'active']))
         base_conditions.append(Policy.maturity_date.between(current_date, max_maturity))
+    elif filter == 'live':
+        base_conditions.append(func.lower(Policy.status).in_(['live', 'active']))
     else:
-        base_conditions.append(Policy.status == filter)
+        base_conditions.append(func.lower(Policy.status) == filter)
 
     # Query data
     query = select(Policy, Customer).join(Customer, Policy.customer_id == Customer.id).where(*base_conditions)

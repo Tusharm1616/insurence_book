@@ -26,7 +26,7 @@ async def get_expiring_count(
     query = select(func.count(Policy.id)).where(
         and_(
             Policy.agent_id == current_user.id,
-            Policy.status == 'live',
+            func.lower(Policy.status).in_(['live', 'active']),
             Policy.expiry_date > current_date,
             Policy.expiry_date <= max_date
         )
@@ -52,7 +52,7 @@ async def get_expiring_list(
     query = select(Policy, Customer).join(Customer, Policy.customer_id == Customer.id).where(
         and_(
             Policy.agent_id == current_user.id,
-            Policy.status == 'live',
+            func.lower(Policy.status).in_(['live', 'active']),
             Policy.expiry_date > current_date,
             Policy.expiry_date <= max_date
         )
@@ -62,7 +62,7 @@ async def get_expiring_list(
     count_query = select(func.count(Policy.id)).where(
         and_(
             Policy.agent_id == current_user.id,
-            Policy.status == 'live',
+            func.lower(Policy.status).in_(['live', 'active']),
             Policy.expiry_date > current_date,
             Policy.expiry_date <= max_date
         )

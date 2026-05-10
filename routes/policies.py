@@ -28,7 +28,14 @@ async def create_policy(
     if not customer or customer.agent_id != current_user.id:
         raise HTTPException(status_code=404, detail="Customer not found or access denied")
         
-    new_policy = Policy(**policy_in.dict())
+    # Normalize status to lowercase; map legacy 'active' to 'live'
+    policy_data = policy_in.dict()
+    raw_status = (policy_data.get('status') or 'live').strip().lower()
+    if raw_status == 'active':
+        raw_status = 'live'
+    policy_data['status'] = raw_status
+    
+    new_policy = Policy(**policy_data)
     new_policy.agent_id = current_user.id
     db.add(new_policy)
     await db.commit()
