@@ -69,7 +69,7 @@ async def get_policies(
         
         # Apply customer filter if provided
         if customer_id:
-            query = query.where(Policy.customer_id == uuid.UUID(customer_id))
+            query = query.where(Policy.customer_id == int(customer_id))
         
         # Apply search filter
         if search:
@@ -114,7 +114,7 @@ async def get_policies(
             )
         
         if customer_id:
-            count_query = count_query.where(Policy.customer_id == uuid.UUID(customer_id))
+            count_query = count_query.where(Policy.customer_id == int(customer_id))
         
         if search:
             search_term = f"%{search}%"
@@ -196,7 +196,7 @@ async def create_policy(
         customer_id = policy_data.get("customer_id")
         if customer_id:
             customer_query = select(Customer).where(
-                Customer.id == uuid.UUID(customer_id),
+                Customer.id == int(customer_id),
                 Customer.agent_id == agent_id
             )
             customer_result = await db.execute(customer_query)
@@ -210,7 +210,7 @@ async def create_policy(
         
         new_policy = Policy(
             agent_id=agent_id,
-            customer_id=uuid.UUID(customer_id) if customer_id else None,
+            customer_id=int(customer_id) if customer_id else None,
             policy_number=policy_data.get("policy_number"),
             policy_type=policy_data.get("policy_type"),
             insurer_name=policy_data.get("insurer_name"),
@@ -272,7 +272,7 @@ async def update_policy(
         
         # Get existing policy
         policy_query = select(Policy).where(
-            Policy.id == uuid.UUID(policy_id),
+            Policy.id == int(policy_id),
             Policy.agent_id == agent_id
         )
         policy_result = await db.execute(policy_query)
@@ -290,7 +290,7 @@ async def update_policy(
                 if field == "customer_id":
                     # Verify new customer belongs to agent
                     customer_query = select(Customer).where(
-                        Customer.id == uuid.UUID(value),
+                        Customer.id == int(value),
                         Customer.agent_id == agent_id
                     )
                     customer_result = await db.execute(customer_query)
@@ -301,7 +301,7 @@ async def update_policy(
                             status_code=404,
                             detail="Customer not found or access denied"
                         )
-                    setattr(policy, field, uuid.UUID(value))
+                    setattr(policy, field, int(value))
                 else:
                     setattr(policy, field, value)
         

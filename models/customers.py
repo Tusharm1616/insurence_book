@@ -1,14 +1,12 @@
-from sqlalchemy import Column, String, Date, ForeignKey, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Date, ForeignKey, Text, Integer
 from sqlalchemy.orm import relationship
 from database import Base
-import uuid
 
 class Customer(Base):
     __tablename__ = "customers"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    id = Column(Integer, primary_key=True, index=True)
+    agent_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
     
     # Personal Details
     full_name = Column(String(150), nullable=False)

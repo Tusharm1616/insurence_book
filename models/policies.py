@@ -1,5 +1,5 @@
-from sqlalchemy import Column, String, Date, ForeignKey, Text, Index
-from sqlalchemy.dialects.postgresql import UUID, NUMERIC
+from sqlalchemy import Column, String, Date, ForeignKey, Text, Index, Integer
+from sqlalchemy.dialects.postgresql import NUMERIC
 from sqlalchemy.orm import relationship
 from database import Base
 import uuid
@@ -7,9 +7,9 @@ import uuid
 class Policy(Base):
     __tablename__ = "policies"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
-    agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
-    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id", ondelete="CASCADE"))
+    id = Column(Integer, primary_key=True, index=True)
+    agent_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="CASCADE"))
     
     policy_number = Column(String(60), unique=True, nullable=False, index=True)
     policy_type = Column(String(60), nullable=False)  # e.g. 'Motor', 'Health', 'Life', 'Term'

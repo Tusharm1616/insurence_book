@@ -135,7 +135,7 @@ async def get_customer_detail(
         
         # Get customer
         customer_query = select(Customer).where(
-            Customer.id == uuid.UUID(customer_id),
+            Customer.id == int(customer_id),
             Customer.agent_id == agent_id
         )
         customer_result = await db.execute(customer_query)
@@ -264,7 +264,7 @@ async def update_customer(
         
         # Get existing customer
         customer_query = select(Customer).where(
-            Customer.id == uuid.UUID(customer_id),
+            Customer.id == int(customer_id),
             Customer.agent_id == agent_id
         )
         customer_result = await db.execute(customer_query)

@@ -1,9 +1,7 @@
-from sqlalchemy import Column, String, Enum, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Enum, ForeignKey, Integer
 from sqlalchemy.orm import relationship
 import enum
 from database import Base
-import uuid
 
 class UserRole(str, enum.Enum):
     AGENT = "agent"
@@ -12,7 +10,7 @@ class UserRole(str, enum.Enum):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True) # Mobile or ID
     email = Column(String, unique=True, index=True, nullable=True)
     full_name = Column(String)
