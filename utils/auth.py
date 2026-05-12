@@ -48,7 +48,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -56,21 +56,38 @@ from sqlalchemy import func
 from database import get_db
 from models.users import User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login", auto_error=False)
 
-async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+async def get_current_user(request: Request, token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
+    # Debug logging
+    auth_header = request.headers.get("Authorization")
+    print(f"DEBUG: get_current_user - Authorization Header: {auth_header}")
+    print(f"DEBUG: get_current_user - Extracted Token: {token[:10] if token else 'None'}...")
+    if not token:
+        print("DEBUG: No token found in request headers")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token missing",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
+            print("DEBUG: Token sub is null")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token invalid: sub missing",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+    except JWTError as e:
+        print(f"DEBUG: JWT decode error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Token invalid: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
         
     result = await db.execute(select(User).where(
         (func.lower(User.username) == username.lower()) | 
@@ -78,5 +95,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     ))
     user = result.scalars().first()
     if user is None:
-        raise credentials_exception
+        print(f"DEBUG: User not found for sub: {username}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return user

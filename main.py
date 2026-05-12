@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from datetime import timedelta
+from datetime import datetime, timedelta
 import uvicorn
 import logging
 import os
@@ -14,7 +15,7 @@ from fastapi import Request
 import time
 
 from database import engine, Base, get_db
-from utils.auth import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from utils.auth import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user
 from models.users import User, UserRole
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -45,6 +46,10 @@ async def init_db():
                     "ALTER TABLE policies ADD COLUMN IF NOT EXISTS vehicle_reg_no VARCHAR(20);",
                     "ALTER TABLE customers ADD COLUMN IF NOT EXISTS date_of_birth DATE;",
                     "ALTER TABLE customers ADD COLUMN IF NOT EXISTS anniversary_date DATE;",
+                    "ALTER TABLE customers ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active';",
+                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active';",
+                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS start_date DATE DEFAULT CURRENT_DATE;",
+                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS end_date DATE DEFAULT CURRENT_DATE + INTERVAL '1 year';",
                     # Fix missing columns in policies table
                     "ALTER TABLE policies ALTER COLUMN policy_number SET NOT NULL DEFAULT '';",
                     "ALTER TABLE policies ALTER COLUMN policy_type SET NOT NULL DEFAULT 'Other';",
@@ -293,12 +298,17 @@ async def log_requests(request: Request, call_next):
     process_time = time.time() - start_time
     # Avoid logging docs/openapi for cleaner logs
     if not request.url.path.startswith(("/docs", "/openapi.json")):
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] {request.method} {request.url.path} -> {response.status_code} ({process_time:.4f}s)")
+        auth_header = request.headers.get("Authorization")
+        has_auth = "Yes" if auth_header else "No"
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] {request.method} {request.url.path} -> {response.status_code} (Auth: {has_auth}, Time: {process_time:.4f}s)")
     return response
 
 # Global Exception Handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    if isinstance(exc, HTTPException):
+        return await http_exception_handler(request, exc)
+        
     import traceback
     logging.error(f"Unhandled error: {exc}", exc_info=True)
     return JSONResponse(
@@ -313,11 +323,20 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Diagnostic Ping Endpoint
+@app.get("/api/ping")
+async def ping(current_user: User = Depends(get_current_user)):
+    return {
+        "status": "success",
+        "message": "Authentication working!",
+        "user": current_user.email or current_user.username
+    }
 
 app.include_router(auth.router)
 app.include_router(auth.api_auth_router)
