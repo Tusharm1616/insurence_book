@@ -23,4 +23,3 @@ class User(Base):
     
     # Relationships
     managed_customers = relationship("Customer", back_populates="agent", foreign_keys="[Customer.agent_id]")
-    customer_profile = relationship("Customer", back_populates="user", foreign_keys="[Customer.user_id]", uselist=False)
