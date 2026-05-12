@@ -17,7 +17,6 @@ import 'providers/lead_provider.dart';
 
 import 'screens/bank_details_screen.dart';
 import 'screens/contact_us_screen.dart';
-import 'screens/banner_screen.dart';
 
 import 'screens/expiring_policies_screen.dart';
 import 'screens/expired_policies_screen.dart';
@@ -73,7 +72,6 @@ class InsureBookApp extends ConsumerWidget {
         '/add_lead':         (context) => const AddLeadScreen(),
         '/bank_details':     (context) => const BankDetailsScreen(),
         '/contact_us':       (context) => const ContactUsScreen(),
-        '/banner_settings':  (context) => const BannerScreen(),
         '/change_password':  (context) => const ChangePasswordScreen(),
         '/terms':            (context) => const TermsConditionsScreen(),
         '/expired_policies': (context) => const ExpiredPoliciesScreen(),

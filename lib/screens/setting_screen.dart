@@ -151,7 +151,6 @@ class _SettingScreenState extends ConsumerState<SettingScreen> {
             _buildSectionHeader('Account & Management'),
             _settingTile(context, LucideIcons.lock, Colors.orange, 'Change Password', 'Update your login password', '/change_password'),
             _settingTile(context, LucideIcons.landmark, Colors.blue, 'Bank Details', 'Your bank account information', '/bank_details'),
-            _settingTile(context, LucideIcons.flag, Colors.purple, 'Banner Management', 'Manage promotional banners', '/banner_settings'),
             
             const SizedBox(height: 16),
             _buildSectionHeader('Support & Legal'),
