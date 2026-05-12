@@ -31,241 +31,243 @@ async def init_db():
     max_retries = 5
     for attempt in range(max_retries):
         try:
+            # 1. First, create missing tables
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
-                from sqlalchemy import text
-                
-                # Safely run migrations
-                migrations = [
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR, ADD COLUMN IF NOT EXISTS license_no VARCHAR;",
-                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE;",
-                    "ALTER TABLE policies RENAME COLUMN insurance_type TO policy_type;",
-                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS maturity_date DATE;",
-                    "ALTER TABLE policies RENAME COLUMN renewal_date TO premium_due_date;",
-                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS ncb_percent FLOAT DEFAULT 0.0;",
-                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS vehicle_reg_no VARCHAR(20);",
-                    "ALTER TABLE customers ADD COLUMN IF NOT EXISTS date_of_birth DATE;",
-                    "ALTER TABLE customers ADD COLUMN IF NOT EXISTS anniversary_date DATE;",
-                    "ALTER TABLE customers ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active';",
-                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active';",
-                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS start_date DATE DEFAULT CURRENT_DATE;",
-                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS end_date DATE DEFAULT CURRENT_DATE + INTERVAL '1 year';",
-                    # Fix missing columns in policies table
-                    "ALTER TABLE policies ALTER COLUMN policy_number SET NOT NULL DEFAULT '';",
-                    "ALTER TABLE policies ALTER COLUMN policy_type SET NOT NULL DEFAULT 'Other';",
-                    "ALTER TABLE policies ALTER COLUMN status SET NOT NULL DEFAULT 'active';",
-                    "ALTER TABLE policies ALTER COLUMN issue_date SET NOT NULL DEFAULT CURRENT_DATE;",
-                    "ALTER TABLE policies ALTER COLUMN expiry_date SET NOT NULL DEFAULT CURRENT_DATE + INTERVAL '1 year';",
-                    # Motor insurance tables creation
-                    """
-                    CREATE TABLE IF NOT EXISTS motor_insurance_policies (
-                        id SERIAL PRIMARY KEY,
-                        policy_id INTEGER REFERENCES policies(id) ON DELETE CASCADE,
-                        agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                        customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
-                        insurance_type VARCHAR(50) NOT NULL DEFAULT 'comprehensive',
-                        vehicle_type VARCHAR(10) NOT NULL,
-                        vehicle_make VARCHAR(100) NOT NULL,
-                        vehicle_model VARCHAR(100) NOT NULL,
-                        vehicle_variant VARCHAR(100),
-                        manufacture_year INTEGER NOT NULL,
-                        registration_number VARCHAR(20) UNIQUE NOT NULL,
-                        cubic_capacity INTEGER NOT NULL,
-                        fuel_type VARCHAR(20),
-                        idv FLOAT NOT NULL,
-                        ncb_percent FLOAT DEFAULT 0.0,
-                        previous_policy_number VARCHAR(100),
-                        previous_insurer VARCHAR(100),
-                        policy_expiry_date DATE,
-                        coverage_details JSON,
-                        zero_depreciation BOOLEAN DEFAULT FALSE,
-                        engine_protection BOOLEAN DEFAULT FALSE,
-                        return_to_invoice BOOLEAN DEFAULT FALSE,
-                        roadside_assistance BOOLEAN DEFAULT FALSE,
-                        consumable_cover BOOLEAN DEFAULT FALSE,
-                        personal_accident_cover BOOLEAN DEFAULT TRUE,
-                        passenger_cover BOOLEAN DEFAULT FALSE,
-                        driver_cover BOOLEAN DEFAULT FALSE,
-                        base_premium FLOAT,
-                        third_party_premium FLOAT,
-                        own_damage_premium FLOAT,
-                        addons_premium FLOAT,
-                        net_premium FLOAT,
-                        gst_amount FLOAT,
-                        final_premium FLOAT,
-                        issue_date DATE NOT NULL,
-                        expiry_date DATE NOT NULL,
-                        cashless_garage_network BOOLEAN DEFAULT TRUE,
-                        fast_claim_settlement BOOLEAN DEFAULT TRUE,
-                        roadside_assistance_24x7 BOOLEAN DEFAULT TRUE,
-                        personal_accident_cover_24x7 BOOLEAN DEFAULT TRUE,
-                        hassle_free_process BOOLEAN DEFAULT TRUE,
-                        claim_history JSON,
-                        claim_free_years INTEGER DEFAULT 0,
-                        is_active BOOLEAN DEFAULT TRUE,
-                        is_renewed BOOLEAN DEFAULT FALSE,
-                        special_conditions TEXT,
-                        agent_notes TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    );
-                    """,
-                    """
-                    CREATE TABLE IF NOT EXISTS motor_insurance_quotes (
-                        id SERIAL PRIMARY KEY,
-                        agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                        customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
-                        quote_number VARCHAR(100) UNIQUE NOT NULL,
-                        insurance_type VARCHAR(50) NOT NULL,
-                        vehicle_type VARCHAR(10) NOT NULL,
-                        vehicle_make VARCHAR(100) NOT NULL,
-                        vehicle_model VARCHAR(100) NOT NULL,
-                        manufacture_year INTEGER NOT NULL,
-                        registration_number VARCHAR(20),
-                        cubic_capacity INTEGER NOT NULL,
-                        fuel_type VARCHAR(20),
-                        idv FLOAT NOT NULL,
-                        ncb_percent FLOAT DEFAULT 0.0,
-                        base_premium FLOAT,
-                        third_party_premium FLOAT,
-                        own_damage_premium FLOAT,
-                        addons_premium FLOAT,
-                        net_premium FLOAT,
-                        gst_amount FLOAT,
-                        final_premium FLOAT,
-                        selected_addons JSON,
-                        status VARCHAR(20) DEFAULT 'pending',
-                        valid_until DATE,
-                        created_at DATE DEFAULT CURRENT_DATE,
-                        updated_at DATE DEFAULT CURRENT_DATE
-                    );
-                    """,
-                    """
-                    CREATE TABLE IF NOT EXISTS reminders (
-                        id SERIAL PRIMARY KEY,
-                        agent_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
-                        title VARCHAR(255) NOT NULL,
-                        reminder_type VARCHAR(50) DEFAULT 'birthday',
-                        person_name VARCHAR(255) NOT NULL,
-                        phone_number VARCHAR(20),
-                        reminder_date DATE NOT NULL,
-                        notes TEXT,
-                        is_active BOOLEAN DEFAULT TRUE,
-                        notify_whatsapp BOOLEAN DEFAULT TRUE,
-                        notify_call BOOLEAN DEFAULT FALSE,
-                        days_before INTEGER DEFAULT 0,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    );
-                    """,
-                    """
-                    CREATE TABLE IF NOT EXISTS vehicle_document_cache (
-                        id SERIAL PRIMARY KEY,
-                        registration_number VARCHAR(20) UNIQUE NOT NULL,
-                        documents JSONB NOT NULL,
-                        fetched_at TIMESTAMP DEFAULT NOW(),
-                        expires_at TIMESTAMP NOT NULL,
-                        created_at TIMESTAMP DEFAULT NOW()
-                    );
-                    """,
-                    """
-                    CREATE TABLE IF NOT EXISTS motor_quote_history (
-                        id SERIAL PRIMARY KEY,
-                        agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                        customer_name VARCHAR(100),
-                        vehicle_type VARCHAR(20),
-                        vehicle_reg_no VARCHAR(20),
-                        year_of_manufacture INTEGER,
-                        cc_category VARCHAR(20),
-                        fuel_type VARCHAR(20),
-                        idv DECIMAL(12,2),
-                        ncb_percent DECIMAL(5,2),
-                        addons JSONB,
-                        od_premium DECIMAL(10,2),
-                        tp_premium DECIMAL(10,2),
-                        addons_total DECIMAL(10,2),
-                        gst DECIMAL(10,2),
-                        total_premium DECIMAL(10,2),
-                        pdf_url TEXT,
-                        created_at TIMESTAMP DEFAULT NOW()
-                    );
-                    """,
-                    """
-                    CREATE TABLE IF NOT EXISTS terms_conditions (
-                        id SERIAL PRIMARY KEY,
-                        title VARCHAR(255) DEFAULT 'Terms and Conditions',
-                        version VARCHAR(50) DEFAULT '1.0.0',
-                        content JSONB NOT NULL,
-                        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                    );
-                    """,
-                    # Indexes
-                    "CREATE INDEX IF NOT EXISTS ix_customers_agent_id ON customers(agent_id);",
-                    "CREATE INDEX IF NOT EXISTS ix_customers_agent_dob ON customers(agent_id, dob);",
-                    "CREATE INDEX IF NOT EXISTS ix_customers_agent_anniversary ON customers(agent_id, anniversary_date);",
-                    "CREATE INDEX IF NOT EXISTS ix_policies_agent_status ON policies(agent_id, status);",
-                    "CREATE INDEX IF NOT EXISTS ix_policies_agent_type ON policies(agent_id, policy_type);",
-                    "CREATE INDEX IF NOT EXISTS ix_policies_agent_expiry_live ON policies(agent_id, expiry_date) WHERE status = 'live';",
-                    "CREATE INDEX IF NOT EXISTS ix_policies_agent_maturity_live ON policies(agent_id, maturity_date) WHERE status = 'live';",
-                    # Reminder indexes
-                    "CREATE INDEX IF NOT EXISTS ix_reminders_agent_id ON reminders(agent_id);",
-                    "CREATE INDEX IF NOT EXISTS ix_reminders_date ON reminders(reminder_date);",
-                    "CREATE INDEX IF NOT EXISTS ix_reminders_agent_date ON reminders(agent_id, reminder_date);",
-                    "CREATE INDEX IF NOT EXISTS ix_reminders_type ON reminders(reminder_type);",
-                    "CREATE INDEX IF NOT EXISTS ix_reminders_active ON reminders(is_active);",
-                    # Motor insurance indexes
-                    "CREATE INDEX IF NOT EXISTS ix_motor_policies_agent_id ON motor_insurance_policies(agent_id);",
-                    "CREATE INDEX IF NOT EXISTS ix_motor_policies_customer_id ON motor_insurance_policies(customer_id);",
-                    "CREATE INDEX IF NOT EXISTS ix_motor_policies_reg_no ON motor_insurance_policies(registration_number);",
-                    "CREATE INDEX IF NOT EXISTS ix_motor_policies_type ON motor_insurance_policies(insurance_type);",
-                    "CREATE INDEX IF NOT EXISTS ix_motor_policies_expiry ON motor_insurance_policies(expiry_date);",
-                    "CREATE INDEX IF NOT EXISTS ix_motor_quotes_agent_id ON motor_insurance_quotes(agent_id);",
-                    "CREATE INDEX IF NOT EXISTS ix_motor_quotes_customer_id ON motor_insurance_quotes(customer_id);",
-                    "CREATE INDEX IF NOT EXISTS ix_motor_quotes_number ON motor_insurance_quotes(quote_number);",
-                    "CREATE INDEX IF NOT EXISTS ix_motor_quotes_status ON motor_insurance_quotes(status);",
-                    """
-                    CREATE TABLE IF NOT EXISTS vehicle_documents (
-                        id SERIAL PRIMARY KEY,
-                        agent_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                        customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
-                        vehicle_number VARCHAR(20) NOT NULL,
-                        vehicle_type VARCHAR(50) NOT NULL,
-                        vehicle_model VARCHAR(100) NOT NULL,
-                        manufacturer VARCHAR(100) NOT NULL,
-                        fuel_type VARCHAR(30) NOT NULL,
-                        registration_year INTEGER,
-                        insurance_expiry DATE,
-                        puc_expiry DATE,
-                        rc_expiry DATE,
-                        license_expiry DATE,
-                        fitness_expiry DATE,
-                        reminder_sent BOOLEAN DEFAULT FALSE,
-                        notes TEXT,
-                        created_at TIMESTAMP DEFAULT NOW(),
-                        updated_at TIMESTAMP DEFAULT NOW()
-                    );
-                    """,
-                    "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_agent_id ON vehicle_documents(agent_id);",
-                    "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_customer_id ON vehicle_documents(customer_id);",
-                    "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_vehicle_number ON vehicle_documents(vehicle_number);",
-                    "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_insurance_expiry ON vehicle_documents(insurance_expiry);",
-                    "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_puc_expiry ON vehicle_documents(puc_expiry);",
-                    # Indexes
-                    "CREATE INDEX IF NOT EXISTS ix_motor_quote_history_agent_id ON motor_quote_history(agent_id);"
-                ]
-                
-                print(f"DEBUG: Starting migrations execution ({len(migrations)} tasks)...")
-                for sql in migrations:
-                    try:
-                        # Use a dedicated transaction for each migration to prevent one failure from blocking others
-                        async with engine.begin() as migration_conn:
-                            await migration_conn.execute(text(sql))
-                    except Exception as migration_error:
-                        # Log but continue - often these are "column already exists" errors
-                        if "already exists" not in str(migration_error).lower():
-                            print(f"Migration notice for '{sql[:30]}...': {migration_error}")
-                
+            
+            from sqlalchemy import text
+            
+            # Safely run migrations
+            migrations = [
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR, ADD COLUMN IF NOT EXISTS license_no VARCHAR;",
+                "ALTER TABLE policies ADD COLUMN IF NOT EXISTS agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE;",
+                "ALTER TABLE policies RENAME COLUMN insurance_type TO policy_type;",
+                "ALTER TABLE policies ADD COLUMN IF NOT EXISTS maturity_date DATE;",
+                "ALTER TABLE policies RENAME COLUMN renewal_date TO premium_due_date;",
+                "ALTER TABLE policies ADD COLUMN IF NOT EXISTS ncb_percent FLOAT DEFAULT 0.0;",
+                "ALTER TABLE policies ADD COLUMN IF NOT EXISTS vehicle_reg_no VARCHAR(20);",
+                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS date_of_birth DATE;",
+                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS anniversary_date DATE;",
+                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active';",
+                "ALTER TABLE policies ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active';",
+                "ALTER TABLE policies ADD COLUMN IF NOT EXISTS start_date DATE DEFAULT CURRENT_DATE;",
+                "ALTER TABLE policies ADD COLUMN IF NOT EXISTS end_date DATE DEFAULT CURRENT_DATE + INTERVAL '1 year';",
+                # Fix missing columns in policies table
+                "ALTER TABLE policies ALTER COLUMN policy_number SET NOT NULL DEFAULT '';",
+                "ALTER TABLE policies ALTER COLUMN policy_type SET NOT NULL DEFAULT 'Other';",
+                "ALTER TABLE policies ALTER COLUMN status SET NOT NULL DEFAULT 'active';",
+                "ALTER TABLE policies ALTER COLUMN issue_date SET NOT NULL DEFAULT CURRENT_DATE;",
+                "ALTER TABLE policies ALTER COLUMN expiry_date SET NOT NULL DEFAULT CURRENT_DATE + INTERVAL '1 year';",
+                # Motor insurance tables creation
+                """
+                CREATE TABLE IF NOT EXISTS motor_insurance_policies (
+                    id SERIAL PRIMARY KEY,
+                    policy_id INTEGER REFERENCES policies(id) ON DELETE CASCADE,
+                    agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+                    insurance_type VARCHAR(50) NOT NULL DEFAULT 'comprehensive',
+                    vehicle_type VARCHAR(10) NOT NULL,
+                    vehicle_make VARCHAR(100) NOT NULL,
+                    vehicle_model VARCHAR(100) NOT NULL,
+                    vehicle_variant VARCHAR(100),
+                    manufacture_year INTEGER NOT NULL,
+                    registration_number VARCHAR(20) UNIQUE NOT NULL,
+                    cubic_capacity INTEGER NOT NULL,
+                    fuel_type VARCHAR(20),
+                    idv FLOAT NOT NULL,
+                    ncb_percent FLOAT DEFAULT 0.0,
+                    previous_policy_number VARCHAR(100),
+                    previous_insurer VARCHAR(100),
+                    policy_expiry_date DATE,
+                    coverage_details JSON,
+                    zero_depreciation BOOLEAN DEFAULT FALSE,
+                    engine_protection BOOLEAN DEFAULT FALSE,
+                    return_to_invoice BOOLEAN DEFAULT FALSE,
+                    roadside_assistance BOOLEAN DEFAULT FALSE,
+                    consumable_cover BOOLEAN DEFAULT FALSE,
+                    personal_accident_cover BOOLEAN DEFAULT TRUE,
+                    passenger_cover BOOLEAN DEFAULT FALSE,
+                    driver_cover BOOLEAN DEFAULT FALSE,
+                    base_premium FLOAT,
+                    third_party_premium FLOAT,
+                    own_damage_premium FLOAT,
+                    addons_premium FLOAT,
+                    net_premium FLOAT,
+                    gst_amount FLOAT,
+                    final_premium FLOAT,
+                    issue_date DATE NOT NULL,
+                    expiry_date DATE NOT NULL,
+                    cashless_garage_network BOOLEAN DEFAULT TRUE,
+                    fast_claim_settlement BOOLEAN DEFAULT TRUE,
+                    roadside_assistance_24x7 BOOLEAN DEFAULT TRUE,
+                    personal_accident_cover_24x7 BOOLEAN DEFAULT TRUE,
+                    hassle_free_process BOOLEAN DEFAULT TRUE,
+                    claim_history JSON,
+                    claim_free_years INTEGER DEFAULT 0,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    is_renewed BOOLEAN DEFAULT FALSE,
+                    special_conditions TEXT,
+                    agent_notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS motor_insurance_quotes (
+                    id SERIAL PRIMARY KEY,
+                    agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+                    quote_number VARCHAR(100) UNIQUE NOT NULL,
+                    insurance_type VARCHAR(50) NOT NULL,
+                    vehicle_type VARCHAR(10) NOT NULL,
+                    vehicle_make VARCHAR(100) NOT NULL,
+                    vehicle_model VARCHAR(100) NOT NULL,
+                    manufacture_year INTEGER NOT NULL,
+                    registration_number VARCHAR(20),
+                    cubic_capacity INTEGER NOT NULL,
+                    fuel_type VARCHAR(20),
+                    idv FLOAT NOT NULL,
+                    ncb_percent FLOAT DEFAULT 0.0,
+                    base_premium FLOAT,
+                    third_party_premium FLOAT,
+                    own_damage_premium FLOAT,
+                    addons_premium FLOAT,
+                    net_premium FLOAT,
+                    gst_amount FLOAT,
+                    final_premium FLOAT,
+                    selected_addons JSON,
+                    status VARCHAR(20) DEFAULT 'pending',
+                    valid_until DATE,
+                    created_at DATE DEFAULT CURRENT_DATE,
+                    updated_at DATE DEFAULT CURRENT_DATE
+                );
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS reminders (
+                    id SERIAL PRIMARY KEY,
+                    agent_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+                    title VARCHAR(255) NOT NULL,
+                    reminder_type VARCHAR(50) DEFAULT 'birthday',
+                    person_name VARCHAR(255) NOT NULL,
+                    phone_number VARCHAR(20),
+                    reminder_date DATE NOT NULL,
+                    notes TEXT,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    notify_whatsapp BOOLEAN DEFAULT TRUE,
+                    notify_call BOOLEAN DEFAULT FALSE,
+                    days_before INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS vehicle_document_cache (
+                    id SERIAL PRIMARY KEY,
+                    registration_number VARCHAR(20) UNIQUE NOT NULL,
+                    documents JSONB NOT NULL,
+                    fetched_at TIMESTAMP DEFAULT NOW(),
+                    expires_at TIMESTAMP NOT NULL,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS motor_quote_history (
+                    id SERIAL PRIMARY KEY,
+                    agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    customer_name VARCHAR(100),
+                    vehicle_type VARCHAR(20),
+                    vehicle_reg_no VARCHAR(20),
+                    year_of_manufacture INTEGER,
+                    cc_category VARCHAR(20),
+                    fuel_type VARCHAR(20),
+                    idv DECIMAL(12,2),
+                    ncb_percent DECIMAL(5,2),
+                    addons JSONB,
+                    od_premium DECIMAL(10,2),
+                    tp_premium DECIMAL(10,2),
+                    addons_total DECIMAL(10,2),
+                    gst DECIMAL(10,2),
+                    total_premium DECIMAL(10,2),
+                    pdf_url TEXT,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                """,
+                """
+                CREATE TABLE IF NOT EXISTS terms_conditions (
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR(255) DEFAULT 'Terms and Conditions',
+                    version VARCHAR(50) DEFAULT '1.0.0',
+                    content JSONB NOT NULL,
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+                """,
+                # Indexes
+                "CREATE INDEX IF NOT EXISTS ix_customers_agent_id ON customers(agent_id);",
+                "CREATE INDEX IF NOT EXISTS ix_customers_agent_dob ON customers(agent_id, dob);",
+                "CREATE INDEX IF NOT EXISTS ix_customers_agent_anniversary ON customers(agent_id, anniversary_date);",
+                "CREATE INDEX IF NOT EXISTS ix_policies_agent_status ON policies(agent_id, status);",
+                "CREATE INDEX IF NOT EXISTS ix_policies_agent_type ON policies(agent_id, policy_type);",
+                "CREATE INDEX IF NOT EXISTS ix_policies_agent_expiry_live ON policies(agent_id, expiry_date) WHERE status = 'live';",
+                "CREATE INDEX IF NOT EXISTS ix_policies_agent_maturity_live ON policies(agent_id, maturity_date) WHERE status = 'live';",
+                # Reminder indexes
+                "CREATE INDEX IF NOT EXISTS ix_reminders_agent_id ON reminders(agent_id);",
+                "CREATE INDEX IF NOT EXISTS ix_reminders_date ON reminders(reminder_date);",
+                "CREATE INDEX IF NOT EXISTS ix_reminders_agent_date ON reminders(agent_id, reminder_date);",
+                "CREATE INDEX IF NOT EXISTS ix_reminders_type ON reminders(reminder_type);",
+                "CREATE INDEX IF NOT EXISTS ix_reminders_active ON reminders(is_active);",
+                # Motor insurance indexes
+                "CREATE INDEX IF NOT EXISTS ix_motor_policies_agent_id ON motor_insurance_policies(agent_id);",
+                "CREATE INDEX IF NOT EXISTS ix_motor_policies_customer_id ON motor_insurance_policies(customer_id);",
+                "CREATE INDEX IF NOT EXISTS ix_motor_policies_reg_no ON motor_insurance_policies(registration_number);",
+                "CREATE INDEX IF NOT EXISTS ix_motor_policies_type ON motor_insurance_policies(insurance_type);",
+                "CREATE INDEX IF NOT EXISTS ix_motor_policies_expiry ON motor_insurance_policies(expiry_date);",
+                "CREATE INDEX IF NOT EXISTS ix_motor_quotes_agent_id ON motor_insurance_quotes(agent_id);",
+                "CREATE INDEX IF NOT EXISTS ix_motor_quotes_customer_id ON motor_insurance_quotes(customer_id);",
+                "CREATE INDEX IF NOT EXISTS ix_motor_quotes_number ON motor_insurance_quotes(quote_number);",
+                "CREATE INDEX IF NOT EXISTS ix_motor_quotes_status ON motor_insurance_quotes(status);",
+                """
+                CREATE TABLE IF NOT EXISTS vehicle_documents (
+                    id SERIAL PRIMARY KEY,
+                    agent_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+                    vehicle_number VARCHAR(20) NOT NULL,
+                    vehicle_type VARCHAR(50) NOT NULL,
+                    vehicle_model VARCHAR(100) NOT NULL,
+                    manufacturer VARCHAR(100) NOT NULL,
+                    fuel_type VARCHAR(30) NOT NULL,
+                    registration_year INTEGER,
+                    insurance_expiry DATE,
+                    puc_expiry DATE,
+                    rc_expiry DATE,
+                    license_expiry DATE,
+                    fitness_expiry DATE,
+                    reminder_sent BOOLEAN DEFAULT FALSE,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                );
+                """,
+                "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_agent_id ON vehicle_documents(agent_id);",
+                "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_customer_id ON vehicle_documents(customer_id);",
+                "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_vehicle_number ON vehicle_documents(vehicle_number);",
+                "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_insurance_expiry ON vehicle_documents(insurance_expiry);",
+                "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_puc_expiry ON vehicle_documents(puc_expiry);",
+                # Indexes
+                "CREATE INDEX IF NOT EXISTS ix_motor_quote_history_agent_id ON motor_quote_history(agent_id);"
+            ]
+            
+            # 2. Execute migrations one by one, each in its own connection
+            print(f"DEBUG: Starting migrations execution ({len(migrations)} tasks)...")
+            for sql in migrations:
+                try:
+                    async with engine.begin() as migration_conn:
+                        await migration_conn.execute(text(sql))
+                except Exception as migration_error:
+                    # Log but continue - often these are "column already exists" errors
+                    if "already exists" not in str(migration_error).lower():
+                        print(f"Migration notice for '{sql[:30]}...': {migration_error}")
+            
             print("Database connected and initialized successfully.")
             break
         except Exception as e:
