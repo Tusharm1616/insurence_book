@@ -1,362 +1,245 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import '../core/theme.dart';
-import '../providers/customer_provider.dart';
-import '../providers/policy_provider.dart';
-import '../providers/dashboard_provider.dart';
-import '../providers/expired_policies_provider.dart';
-import '../providers/auth_provider.dart';
-import '../screens/customer_policy_screen.dart';
-import 'global_search_delegate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shimmer/shimmer.dart';
 
-class DashboardScreen extends ConsumerWidget {
+import '../core/app_theme.dart';
+import '../providers/dashboard_provider.dart';
+import '../widgets/stats_tile.dart';
+import '../widgets/shimmer_widget.dart';
+
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // Live counts from providers
-    final customers    = ref.watch(customerProvider).asData?.value ?? [];
-    final policies     = ref.watch(policyProvider);
-    final expiredAsync = ref.watch(expiredCountProvider);
-    final lifePolicies = ref.watch(lifeInsurancePoliciesProvider);
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
 
-    final totalCustomers  = customers.length;
-    final activeCustomers = customers.where((c) => c.isActive).length;
-    final totalPolicies   = policies.length;
-    final expiredCount    = expiredAsync.when(
-      data: (c) => '$c',
-      loading: () => '--',
-      error: (e, _) => '--',
-    );
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch dashboard stats when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(dashboardStatsProvider.notifier).fetchDashboardStats();
+    });
+  }
 
-    // Life Insurance Report breakdown
-    final expiringSoon      = lifePolicies.where((p) => p.isExpiringSoon).length;
-
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dashboardStatsAsync = ref.watch(dashboardStatsProvider);
+    
     return Scaffold(
+      backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
-        title: const Text('Agent Dashboard', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppColors.primary,
+        title: const Text(
+          'Statistics Overview',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontFamily: 'Poppins',
+          ),
+        ),
+        backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.search),
-            onPressed: () {
-              showSearch(context: context, delegate: GlobalSearchDelegate(ref));
-            },
-          ),
-          IconButton(
-            icon: const Icon(LucideIcons.bell),
-            onPressed: () {},
-          ),
-        ],
+        centerTitle: true,
       ),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
-            child: SingleChildScrollView(
-              child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildWelcomeCard(ref),
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  // ── Quick Actions ────────────────────────────────
-                  _buildSectionHeader(context, 'Quick Actions', LucideIcons.zap),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(child: GestureDetector(
-                        onTap: () => Navigator.pushNamed(context, '/create_customer'),
-                        child: _buildActionCard(context, 'Add Customer', LucideIcons.userPlus, Colors.green),
-                      )),
-                      const SizedBox(width: 12),
-                      Expanded(child: GestureDetector(
-                        onTap: () => Navigator.pushNamed(context, '/add_policy'),
-                        child: _buildActionCard(context, 'Add Policy', LucideIcons.fileText, Colors.blueGrey),
-                      )),
-                    ],
-                  ),
-
-                  // ── Statistics Overview ──────────────────────────
-                  const SizedBox(height: 24),
-                  _buildSectionHeader(context, 'Statistics Overview', LucideIcons.barChart),
-                  const SizedBox(height: 12),
-                  GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/customers'),
-                    child: _buildStatRowCard(context, 'All Customer', '$totalCustomers', LucideIcons.users, Colors.blue),
-                  ),
-                  const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerPolicyScreen())),
-                    child: _buildStatRowCard(context, 'All Policy', '$totalPolicies', LucideIcons.shield, Colors.green),
-                  ),
-                  const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/expired_policies'),
-                    child: _buildStatRowCard(context, 'Expired Policy', expiredCount, LucideIcons.alertTriangle, Colors.red),
-                  ),
-                  const SizedBox(height: 8),
-                  
-                  // New Expiring Policy Tiles
-                  Consumer(
-                    builder: (context, ref, child) {
-                      final countsAsync = ref.watch(expiringCountsProvider);
-                      final count1m = countsAsync.when(
-                        data: (d) => '${d.month1}',
-                        loading: () => '--',
-                        error: (e, st) => '--',
-                      );
-                      final count2m = countsAsync.when(
-                        data: (d) => '${d.month2}',
-                        loading: () => '--',
-                        error: (e, st) => '--',
-                      );
-                      
-                      return Column(
-                        children: [
-                          GestureDetector(
-                            onTap: () => Navigator.pushNamed(context, '/expiring_policies', arguments: {'days': 30, 'title': 'Expiring Within 1 Month'}),
-                            child: _buildStatRowCard(context, 'Expiring Within 1 Month', count1m, LucideIcons.calendar, const Color(0xFFFF9800)),
-                          ),
-                          const SizedBox(height: 8),
-                          GestureDetector(
-                            onTap: () => Navigator.pushNamed(context, '/expiring_policies', arguments: {'days': 60, 'title': 'Expiring Within 2 Months'}),
-                            child: _buildStatRowCard(context, 'Expiring Within 2 Months', count2m, LucideIcons.calendarDays, const Color(0xFFFFC107)),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
-
-                  GestureDetector(
-                    onTap: () => Navigator.pushNamed(context, '/customers'),
-                    child: _buildStatRowCard(context, 'Active Customers', '$activeCustomers', LucideIcons.userCheck, Colors.teal),
-                  ),
-
-                  // ── Upcoming Items ───────────────────────────────
-                  const SizedBox(height: 24),
-                  _buildSectionHeader(context, 'Upcoming Items', LucideIcons.inbox),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(child: GestureDetector(
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerPolicyScreen(customerName: 'Upcoming Renewals'))),
-                        child: _buildInfoCard(context, 'Upcoming Renewal & Due Premium', 'Policies expiring in 30 days: $expiringSoon', LucideIcons.calendar, Colors.green),
-                      )),
-                      const SizedBox(width: 12),
-                      Expanded(child: GestureDetector(
-                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerPolicyScreen(customerName: 'Expired Policies'))),
-                        child: _buildInfoCard(context, 'Overdue Premium', '$expiredCount policies with overdue payments', LucideIcons.alertCircle, Colors.red),
-                      )),
-                    ],
-                  ),
-
-
-                  // ── Other Features ───────────────────────────────
-                  const SizedBox(height: 24),
-                  _buildSectionHeader(context, 'Other Features', LucideIcons.moreHorizontal),
-                  const SizedBox(height: 12),
-                  _buildFeatureRow(context, 'Vehicle Document Validity', 'RTO Document Status & Expiry', LucideIcons.car, Colors.teal, route: '/vehicle_document'),
-                  _buildFeatureRow(context, 'Customers Birthday', 'Customers birthday reminders', LucideIcons.cake, Colors.pink, route: '/reminders', routeArgs: {'type': 'birthdays'}),
-                  _buildFeatureRow(context, 'Customers Anniversary', 'Customers anniversary reminders', LucideIcons.heart, Colors.red, route: '/reminders', routeArgs: {'type': 'anniversaries'}),
-                  _buildFeatureRow(context, 'Motor Insurance Calculator', 'Calculate premium & generate PDF quotes', LucideIcons.calculator, Colors.purple, route: '/motor_calculator'),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
-          ],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await ref.read(dashboardStatsProvider.notifier).fetchDashboardStats();
+        },
+        child: dashboardStatsAsync.when(
+          data: (stats) => _buildDashboardContent(context, stats),
+          loading: () => _buildLoadingState(),
+          error: (error) => _buildErrorState(error),
         ),
-      ),
-      ),
-      ),
       ),
     );
   }
 
-  Widget _buildWelcomeCard(WidgetRef ref) {
-    final authState = ref.watch(authProvider);
-    final user = authState.user;
-    
-    final hour = DateTime.now().hour;
-    String greeting;
-    if (hour < 12) {
-      greeting = 'Good Morning';
-    } else if (hour < 17) {
-      greeting = 'Good Afternoon';
-    } else {
-      greeting = 'Good Evening';
-    }
-
-    final name = user?.fullName ?? 'Agent';
-    final role = (user?.role ?? 'Agent').toUpperCase();
-    final initials = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'A';
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      margin: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+  Widget _buildDashboardContent(BuildContext context, DashboardStats stats) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Stack(
+          const SizedBox(height: 8),
+          Text(
+            'Statistics Overview',
+            style: theme.textTheme.headlineLarge?.copyWith(
+              color: AppTheme.primaryColor,
+              fontFamily: 'Poppins',
+            ),
+          ),
+          const SizedBox(height: 24),
+          
+          // Stats Tiles Grid
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            childAspectRatio: 1.4,
             children: [
-              CircleAvatar(
-                radius: 30,
-                backgroundColor: Colors.white,
-                child: Text(
-                  initials,
-                  style: const TextStyle(color: AppColors.primary, fontSize: 24, fontWeight: FontWeight.bold),
-                ),
+              // All Customers Tile
+              StatsTile(
+                icon: Icons.people_alt_outlined,
+                iconColor: AppTheme.infoColor,
+                title: 'All Customers',
+                count: stats.all_customers,
+                countColor: AppTheme.infoColor,
+                onTap: () {
+                  Navigator.pushNamed(context, '/customer_list', arguments: {
+                    'filter': 'all',
+                    'title': 'All Customers',
+                  });
+                },
               ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: Colors.greenAccent.shade400,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primary, width: 2),
-                  ),
-                ),
+              
+              // All Policies Tile
+              StatsTile(
+                icon: Icons.shield_outlined,
+                iconColor: AppTheme.primaryColor,
+                title: 'All Policies',
+                count: stats.all_policies,
+                countColor: AppTheme.primaryColor,
+                onTap: () {
+                  Navigator.pushNamed(context, '/policy_list', arguments: {
+                    'filter': 'all',
+                    'title': 'All Policies',
+                  });
+                },
+              ),
+              
+              // Expired Policy Tile
+              StatsTile(
+                icon: Icons.warning_amber_outlined,
+                iconColor: AppTheme.dangerColor,
+                title: 'Expired Policy',
+                count: stats.expired_policies,
+                countColor: AppTheme.dangerColor,
+                onTap: () {
+                  Navigator.pushNamed(context, '/policy_list', arguments: {
+                    'filter': 'expired',
+                    'title': 'Expired Policies',
+                  });
+                },
+              ),
+              
+              // Expiring Within 1 Month Tile
+              StatsTile(
+                icon: Icons.calendar_month_outlined,
+                iconColor: AppTheme.warningColor,
+                title: 'Expiring Within 1 Month',
+                count: stats.expiring_1_month,
+                countColor: AppTheme.warningColor,
+                onTap: () {
+                  Navigator.pushNamed(context, '/policy_list', arguments: {
+                    'filter': 'expiring_1m',
+                    'title': 'Expiring in 1 Month',
+                  });
+                },
+              ),
+              
+              // Expiring Within 2 Months Tile
+              StatsTile(
+                icon: Icons.calendar_today_outlined,
+                iconColor: AppTheme.amberColor,
+                title: 'Expiring Within 2 Months',
+                count: stats.expiring_2_months,
+                countColor: AppTheme.amberColor,
+                onTap: () {
+                  Navigator.pushNamed(context, '/policy_list', arguments: {
+                    'filter': 'expiring_2m',
+                    'title': 'Expiring in 2 Months',
+                  });
+                },
+              ),
+              
+              // Active Customers Tile
+              StatsTile(
+                icon: Icons.person_pin_outlined,
+                iconColor: AppTheme.tealColor,
+                title: 'Active Customers',
+                count: stats.active_customers,
+                countColor: AppTheme.tealColor,
+                onTap: () {
+                  Navigator.pushNamed(context, '/customer_list', arguments: {
+                    'filter': 'active',
+                    'title': 'Active Customers',
+                  });
+                },
               ),
             ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  greeting,
-                  style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  name,
-                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    role,
-                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title, IconData icon) {
-    return Row(children: [
-      Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-        child: Icon(icon, size: 16, color: AppColors.primary),
-      ),
-      const SizedBox(width: 8),
-      Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Theme.of(context).textTheme.displayLarge?.color)),
-    ]);
+  Widget _buildLoadingState() {
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 16,
+      crossAxisSpacing: 16,
+      childAspectRatio: 1.4,
+      children: List.generate(6, (index) => const ShimmerWidget()),
+    );
   }
 
-  Widget _buildActionCard(BuildContext context, String title, IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Column(children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-            child: Icon(icon, color: color, size: 28),
+  Widget _buildErrorState(String error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: AppTheme.dangerColor,
           ),
-          const SizedBox(height: 12),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        ]),
-      ),
-    );
-  }
-
-  Widget _buildStatRowCard(BuildContext context, String title, String count, IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(width: 16),
-          Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600))),
-          Text(count, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
-          const SizedBox(width: 8),
-          const Icon(LucideIcons.chevronRight, size: 16, color: Colors.grey),
-        ]),
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(BuildContext context, String title, String sub, IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 12),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 2),
-          const SizedBox(height: 4),
-          Text(sub, style: TextStyle(fontSize: 11, color: Theme.of(context).textTheme.bodyMedium?.color)),
-        ]),
-      ),
-    );
-  }
-
-
-  Widget _buildFeatureRow(BuildContext context, String title, String sub, IconData icon, Color color, {String? route, Map<String, dynamic>? routeArgs}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor, 
-        borderRadius: BorderRadius.circular(12), 
-        border: Border.all(color: Theme.of(context).dividerColor)
-      ),
-      child: ListTile(
-        onTap: () { if (route != null) Navigator.pushNamed(context, route, arguments: routeArgs); },
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-          child: Icon(icon, color: color, size: 24),
-        ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        subtitle: Text(sub, style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodyMedium?.color)),
-        trailing: const Icon(LucideIcons.chevronRight, size: 18, color: Colors.grey),
+          const SizedBox(height: 16),
+          Text(
+            'Error loading dashboard',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.dangerColor,
+              fontFamily: 'Poppins',
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            error,
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.dangerColor,
+              fontFamily: 'Poppins',
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () {
+              ref.read(dashboardStatsProvider.notifier).fetchDashboardStats();
+            },
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -146,124 +146,138 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
         icon: const Icon(LucideIcons.userPlus, color: Colors.white),
         label: const Text('Add Customer', style: TextStyle(color: Colors.white)),
       ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      color: AppColors.primary,
-      child: TextField(
-        onChanged: (v) => setState(() => _searchQuery = v),
-        decoration: InputDecoration(
-          hintText: 'Search by name or mobile...',
-          prefixIcon: const Icon(LucideIcons.search, size: 20),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(icon: const Icon(Icons.clear, size: 18), onPressed: () => setState(() => _searchQuery = ''))
-              : null,
-          fillColor: Theme.of(context).cardColor,
-          filled: true,
-          contentPadding: EdgeInsets.zero,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         ),
       ),
     );
   }
 
-  Widget _buildEmpty() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(LucideIcons.users, size: 64, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
-          Text(
-            _searchQuery.isNotEmpty ? 'No customers found for "$_searchQuery"' : 'No customers yet',
-            style: const TextStyle(fontSize: 16, color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
-          if (_searchQuery.isEmpty) ...[
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () => Navigator.pushNamed(context, '/create_customer'),
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-              icon: const Icon(LucideIcons.userPlus),
-              label: const Text('Add First Customer'),
-            ),
-          ],
-        ],
-      ),
+  Widget _buildCustomerList(BuildContext context, List<Customer> customers, String filter) {
+    if (customers.isEmpty) {
+      return _buildEmptyState(context, filter);
+    }
+    
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.all(16),
+      itemCount: customers.length,
+      itemBuilder: (context, index) {
+        final customer = customers[index];
+        return _buildCustomerCard(context, customer);
+      },
     );
   }
 
   Widget _buildCustomerCard(BuildContext context, Customer customer) {
+    // Get initials for avatar
+    final initials = customer.fullName.isNotEmpty
+        ? customer.fullName.split(' ').map((word) => word[0]).toUpperCase()
+        : 'C';
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).dividerColor),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header Row ──────────────────────────────────────
-            Row(children: [
-              CircleAvatar(
-                backgroundColor: customer.isActive ? AppColors.primary : Colors.grey,
-                child: Text(customer.fullName[0].toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(customer.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text(
-                    '${customer.gender ?? 'N/A'} • ${customer.city ?? customer.state ?? 'N/A'}',
-                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 12),
+            Row(
+              children: [
+                // Avatar circle
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: AppTheme.infoColor.withOpacity(0.1),
+                  child: Text(
+                    initials,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      fontFamily: 'Poppins',
+                    ),
                   ),
-              ])),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: (customer.isActive ? Colors.green : Colors.grey).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                
+                const SizedBox(width: 16),
+                
+                // Customer info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        customer.fullName,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1C1C1C),
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            customer.mobileNumber,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF6B7280),
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            customer.email ?? '',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF6B7280),
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            customer.city ?? '',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF6B7280),
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            customer.state ?? '',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF6B7280),
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                child: Text(
-                  customer.isActive ? 'ACTIVE' : 'INACTIVE',
-                  style: TextStyle(color: customer.isActive ? Colors.green : Colors.grey, fontSize: 10, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ]),
-
-            const Divider(height: 24),
-
-            // ── Mobile Row ──────────────────────────────────────
-            Row(children: [
-              const Icon(LucideIcons.phone, size: 16, color: Colors.green),
-              const SizedBox(width: 8),
-              Expanded(child: Text(customer.mobileNumber, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15))),
-              if (customer.email != null && customer.email!.isNotEmpty) ...[
-                const Icon(LucideIcons.mail, size: 14, color: AppColors.navInactive),
-                const SizedBox(width: 4),
-                Flexible(child: Text(customer.email!, style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 12), overflow: TextOverflow.ellipsis)),
               ],
-            ]),
-
-            // ── Location Row ────────────────────────────────────
-            if ((customer.state != null && customer.state!.isNotEmpty) || (customer.city != null && customer.city!.isNotEmpty)) ...[
-              const SizedBox(height: 8),
-              Row(children: [
-                const Icon(LucideIcons.mapPin, size: 14, color: AppColors.navInactive),
-                const SizedBox(width: 6),
-                Text(
-                  [customer.city, customer.state].where((e) => e != null && e.isNotEmpty).join(', '),
-                  style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color, fontSize: 13),
-                ),
-              ]),
-            ],
-
+            ),
+            
             const SizedBox(height: 12),
-
-            // ── Credentials Box ─────────────────────────────────
-            _buildCredentialsBox(customer),
-
+            
+            // Row of chips
+            Row(
+              children: [
+                // Status chip
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: customer.isActive ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
             const SizedBox(height: 16),
 
             // ── Action Buttons Row 1 ────────────────────────────
