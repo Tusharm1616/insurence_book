@@ -37,7 +37,7 @@ class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
 class AgentResponse(BaseModel):
-    id: str
+    id: int
     name: Optional[str] = ""
     email: Optional[str] = ""
     license_no: Optional[str] = None

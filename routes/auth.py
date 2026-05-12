@@ -78,7 +78,7 @@ async def api_register_agent(user_in: AgentRegister, db: AsyncSession = Depends(
     return RegisterResponse(
         message="success",
         agent=AgentResponse(
-            id=str(new_user.id),
+            id=new_user.id,
             name=new_user.full_name,
             email=new_user.email,
             license_no=new_user.license_no
@@ -105,7 +105,7 @@ async def api_login(login_data: AgentLogin, db: AsyncSession = Depends(get_db)):
         return LoginResponse(
             token=access_token,
             agent=AgentResponse(
-                id=str(user.id),
+                id=user.id,
                 name=user.full_name,
                 email=user.email or user.username,
                 license_no=user.license_no
