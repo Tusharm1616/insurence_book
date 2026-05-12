@@ -38,8 +38,8 @@ class ForgotPasswordRequest(BaseModel):
 
 class AgentResponse(BaseModel):
     id: str
-    name: str
-    email: EmailStr
+    name: Optional[str] = ""
+    email: Optional[str] = ""
     license_no: Optional[str] = None
 
 class LoginResponse(BaseModel):
