@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'config/mobile_config.dart';
 import 'services/notification_service.dart';

@@ -74,7 +74,7 @@ class MobileConfig {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(borderRadius),
-        borderSide: const BorderSide(color: Color(0xFFE0E0E)),
+        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(borderRadius),
@@ -108,7 +108,7 @@ class MobileConfig {
       borderRadius: BorderRadius.circular(borderRadius),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.1),
+          color: Colors.black.withValues(alpha: 0.1),
           spreadRadius: 1,
           blurRadius: 4,
           offset: const Offset(0, 2),
