@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shimmer/shimmer.dart';
 
 import '../core/app_theme.dart';
 import '../providers/customer_detail_provider.dart';
-import '../widgets/shimmer_widget.dart';
 
 class CustomerDetailScreen extends ConsumerStatefulWidget {
   const CustomerDetailScreen({super.key, required this.customerId});
@@ -19,17 +16,7 @@ class CustomerDetailScreen extends ConsumerStatefulWidget {
 
 class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
   @override
-  void initState() {
-    super.initState();
-    // Fetch customer details when screen loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(customerDetailProvider(widget.customerId).notifier).fetchCustomerDetail(widget.customerId);
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final customerDetailAsync = ref.watch(customerDetailProvider(widget.customerId));
     
     return Scaffold(
@@ -37,7 +24,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
       appBar: AppBar(
         title: customerDetailAsync.when(
           data: (customer) => Text(
-            customer.full_name,
+            customer.fullName,
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -52,7 +39,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
               fontFamily: 'Poppins',
             ),
           ),
-          error: (error) => const Text(
+          error: (err, st) => const Text(
             'Error',
             style: TextStyle(
               fontWeight: FontWeight.bold,
@@ -77,7 +64,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
       body: customerDetailAsync.when(
         data: (customer) => _buildCustomerDetail(context, customer),
         loading: () => _buildLoadingState(),
-        error: (error) => _buildErrorState(error),
+        error: (err, _) => _buildErrorState(err.toString()),
       ),
     );
   }
@@ -124,7 +111,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
             const SizedBox(height: 16),
             
             // Customer details
-            _buildInfoRow('Full Name', customer.full_name),
+            _buildInfoRow('Full Name', customer.fullName),
             _buildInfoRow('Phone', customer.phone),
             _buildInfoRow('Email', customer.email),
             _buildInfoRow('Date of Birth', customer.dob.isNotEmpty ? _formatDate(customer.dob) : 'N/A'),
@@ -151,7 +138,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: customer.status == 'active' ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                    color: customer.status == 'active' ? Colors.green.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -234,7 +221,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    policy.policy_number,
+                    policy.policyNumber,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -246,13 +233,13 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getPolicyTypeColor(policy.policy_type).withOpacity(0.1),
+                    color: _getPolicyTypeColor(policy.policyType).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    policy.policy_type,
+                    policy.policyType,
                     style: TextStyle(
-                      color: _getPolicyTypeColor(policy.policy_type),
+                      color: _getPolicyTypeColor(policy.policyType),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Poppins',
@@ -266,7 +253,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
             
             // Insurer and plan
             Text(
-              '${policy.insurer_name} — ${policy.plan_name}',
+              '${policy.insurerName} — ${policy.planName}',
               style: const TextStyle(
                 fontSize: 14,
                 color: Color(0xFF6B7280),
@@ -281,7 +268,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Sum Insured: ₹${_formatCurrency(policy.sum_insured)}',
+                    'Sum Insured: ₹${_formatCurrency(policy.sumInsured)}',
                     style: const TextStyle(
                       fontSize: 13,
                       color: Color(0xFF1C1C1C),
@@ -291,7 +278,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                 ),
                 Expanded(
                   child: Text(
-                    'Premium: ₹${_formatCurrency(policy.premium_amount)}/yr',
+                    'Premium: ₹${_formatCurrency(policy.premiumAmount)}/yr',
                     style: const TextStyle(
                       fontSize: 13,
                       color: Color(0xFF1C1C1C),
@@ -306,7 +293,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
             
             // Start and end dates
             Text(
-              'Start: ${_formatDate(policy.start_date)} → End: ${_formatDate(policy.end_date)}',
+              'Start: ${_formatDate(policy.startDate)} → End: ${_formatDate(policy.endDate)}',
               style: const TextStyle(
                 fontSize: 13,
                 color: Color(0xFF6B7280),
@@ -324,7 +311,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getPolicyStatusColor(policy.status).withOpacity(0.1),
+                    color: _getPolicyStatusColor(policy.status).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -342,13 +329,13 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getDaysRemainingColor(policy.end_date).withOpacity(0.1),
+                    color: _getDaysRemainingColor(policy.endDate).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    _getDaysRemainingText(policy.end_date),
+                    _getDaysRemainingText(policy.endDate),
                     style: TextStyle(
-                      color: _getDaysRemainingColor(policy.end_date),
+                      color: _getDaysRemainingColor(policy.endDate),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Poppins',
@@ -427,7 +414,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: () {
-              ref.read(customerDetailProvider(widget.customerId).notifier).fetchCustomerDetail(widget.customerId);
+              ref.invalidate(customerDetailProvider(widget.customerId));
             },
             icon: const Icon(Icons.refresh),
             label: const Text('Retry'),
@@ -455,7 +442,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
 
   String _formatCurrency(double amount) {
     return amount.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+$'),
+      RegExp(r'(\d{1,3})(?=(\d{3})+$)'),
       (match) => '${match[1]}${match[2] != null ? ',' : ''}${match[2] ?? ''}',
     );
   }
@@ -527,7 +514,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
       } else if (daysDifference == 0) {
         return 'Expires Today';
       } else {
-        return '${daysDifference} days left';
+        return '$daysDifference days left';
       }
     } catch (e) {
       return 'N/A';

@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shimmer/shimmer.dart';
 
 import '../core/app_theme.dart';
 import '../providers/dashboard_provider.dart';
@@ -53,15 +49,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           await ref.read(dashboardStatsProvider.notifier).fetchDashboardStats();
         },
         child: dashboardStatsAsync.when(
-          data: (stats) => _buildDashboardContent(context, stats),
+          data: (stats) => _buildDashboardContent(context, theme, stats),
           loading: () => _buildLoadingState(),
-          error: (error) => _buildErrorState(error),
+          error: (err, _) => _buildErrorState(err.toString()),
         ),
       ),
     );
   }
 
-  Widget _buildDashboardContent(BuildContext context, DashboardStats stats) {
+  Widget _buildDashboardContent(
+      BuildContext context, ThemeData theme, DashboardStats stats) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -91,7 +88,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 icon: Icons.people_alt_outlined,
                 iconColor: AppTheme.infoColor,
                 title: 'All Customers',
-                count: stats.all_customers,
+                count: stats.allCustomers,
                 countColor: AppTheme.infoColor,
                 onTap: () {
                   Navigator.pushNamed(context, '/customer_list', arguments: {
@@ -106,7 +103,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 icon: Icons.shield_outlined,
                 iconColor: AppTheme.primaryColor,
                 title: 'All Policies',
-                count: stats.all_policies,
+                count: stats.allPolicies,
                 countColor: AppTheme.primaryColor,
                 onTap: () {
                   Navigator.pushNamed(context, '/policy_list', arguments: {
@@ -121,7 +118,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 icon: Icons.warning_amber_outlined,
                 iconColor: AppTheme.dangerColor,
                 title: 'Expired Policy',
-                count: stats.expired_policies,
+                count: stats.expiredPolicies,
                 countColor: AppTheme.dangerColor,
                 onTap: () {
                   Navigator.pushNamed(context, '/policy_list', arguments: {
@@ -136,7 +133,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 icon: Icons.calendar_month_outlined,
                 iconColor: AppTheme.warningColor,
                 title: 'Expiring Within 1 Month',
-                count: stats.expiring_1_month,
+                count: stats.expiring1Month,
                 countColor: AppTheme.warningColor,
                 onTap: () {
                   Navigator.pushNamed(context, '/policy_list', arguments: {
@@ -151,7 +148,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 icon: Icons.calendar_today_outlined,
                 iconColor: AppTheme.amberColor,
                 title: 'Expiring Within 2 Months',
-                count: stats.expiring_2_months,
+                count: stats.expiring2Months,
                 countColor: AppTheme.amberColor,
                 onTap: () {
                   Navigator.pushNamed(context, '/policy_list', arguments: {
@@ -166,7 +163,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 icon: Icons.person_pin_outlined,
                 iconColor: AppTheme.tealColor,
                 title: 'Active Customers',
-                count: stats.active_customers,
+                count: stats.activeCustomers,
                 countColor: AppTheme.tealColor,
                 onTap: () {
                   Navigator.pushNamed(context, '/customer_list', arguments: {
