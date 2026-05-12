@@ -59,12 +59,7 @@ from models.users import User
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login", auto_error=False)
 
 async def get_current_user(request: Request, token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
-    # Debug logging
-    auth_header = request.headers.get("Authorization")
-    print(f"DEBUG: get_current_user - Authorization Header: {auth_header}")
-    print(f"DEBUG: get_current_user - Extracted Token: {token[:10] if token else 'None'}...")
     if not token:
-        print("DEBUG: No token found in request headers")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token missing",

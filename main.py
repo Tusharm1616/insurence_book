@@ -300,7 +300,9 @@ async def log_requests(request: Request, call_next):
     if not request.url.path.startswith(("/docs", "/openapi.json")):
         auth_header = request.headers.get("Authorization")
         has_auth = "Yes" if auth_header else "No"
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] {request.method} {request.url.path} -> {response.status_code} (Auth: {has_auth}, Time: {process_time:.4f}s)")
+        # Print concise request log
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print(f"[{timestamp}] {request.method} {request.url.path} -> {response.status_code} (Auth: {has_auth})")
     return response
 
 # Global Exception Handler

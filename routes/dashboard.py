@@ -19,7 +19,6 @@ async def get_dashboard_stats(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    print(f"DEBUG: Reached get_dashboard_stats for user: {current_user.email or current_user.username}")
     """
     Get dashboard statistics for the current agent.
     Returns counts for all customers, policies, expired policies, 
