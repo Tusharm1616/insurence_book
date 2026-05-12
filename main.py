@@ -255,12 +255,17 @@ async def init_db():
                     "CREATE INDEX IF NOT EXISTS ix_motor_quote_history_agent_id ON motor_quote_history(agent_id);"
                 ]
                 
+                print(f"DEBUG: Starting migrations execution ({len(migrations)} tasks)...")
                 for sql in migrations:
                     try:
-                        await conn.execute(text(sql))
-                    except Exception:
-                        # Ignore errors for existing columns/indexes
-                        pass
+                        # Use a dedicated transaction for each migration to prevent one failure from blocking others
+                        async with engine.begin() as migration_conn:
+                            await migration_conn.execute(text(sql))
+                    except Exception as migration_error:
+                        # Log but continue - often these are "column already exists" errors
+                        if "already exists" not in str(migration_error).lower():
+                            print(f"Migration notice for '{sql[:30]}...': {migration_error}")
+                
             print("Database connected and initialized successfully.")
             break
         except Exception as e:
