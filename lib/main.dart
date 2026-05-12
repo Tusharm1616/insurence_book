@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/app_theme.dart';
+import 'core/theme.dart' hide AppTheme;
+import 'screens/create_customer_screen.dart';
 import 'screens/auth/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/auth/forgot_password_screen.dart';
-import 'screens/main_navigation_screen.dart';
 import 'screens/customer_list_screen.dart';
+import 'screens/new_customer_list_screen.dart';
 import 'screens/customer_detail_screen.dart';
+import 'screens/edit_customer_screen.dart';
 import 'screens/policy_list_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/change_password_screen.dart';
@@ -81,6 +84,40 @@ class InsureBookApp extends ConsumerWidget {
         '/expired_policies': (context) => const ExpiredPoliciesScreen(),
       },
       onGenerateRoute: (settings) {
+        if (settings.name == '/customer_list') {
+          final args = settings.arguments as Map<String, dynamic>? ?? {};
+          return MaterialPageRoute(
+            builder: (_) => NewCustomerListScreen(
+              filter: args['filter'] as String? ?? 'all',
+              title: args['title'] as String? ?? 'All Customers',
+            ),
+          );
+        }
+        if (settings.name == '/policy_list') {
+          final args = settings.arguments as Map<String, dynamic>? ?? {};
+          return MaterialPageRoute(
+            builder: (_) => PolicyListScreen(
+              filter: args['filter'] as String? ?? 'all',
+              title: args['title'] as String? ?? 'All Policies',
+            ),
+          );
+        }
+        if (settings.name == '/customer_detail') {
+          final args = settings.arguments as Map<String, dynamic>? ?? {};
+          return MaterialPageRoute(
+            builder: (_) => CustomerDetailScreen(
+              customerId: args['customerId'] as String? ?? '',
+            ),
+          );
+        }
+        if (settings.name == '/edit_customer') {
+          final args = settings.arguments as Map<String, dynamic>? ?? {};
+          return MaterialPageRoute(
+            builder: (_) => EditCustomerScreen(
+              customerId: args['customerId'] as String? ?? '',
+            ),
+          );
+        }
         if (settings.name == '/expiring_policies') {
           final args = settings.arguments as Map<String, dynamic>;
           return MaterialPageRoute(

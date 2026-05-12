@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../models/customer_model.dart';
 import '../providers/customer_provider.dart';
+import '../providers/dashboard_provider.dart';
+import '../providers/customers_provider.dart';
 import 'customer_options_screen.dart';
 
 class CreateCustomerScreen extends ConsumerStatefulWidget {
@@ -69,6 +71,10 @@ class _CreateCustomerScreenState extends ConsumerState<CreateCustomerScreen> {
     try {
       final savedCustomer = await ref.read(customerProvider.notifier).addCustomer(newCustomer);
       if (!mounted) return;
+      
+      ref.invalidate(dashboardStatsProvider);
+      ref.invalidate(customersProvider);
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(children: [Icon(Icons.check_circle, color: Colors.white), SizedBox(width: 8), Text('Customer saved successfully!')]),

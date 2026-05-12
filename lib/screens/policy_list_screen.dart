@@ -7,7 +7,14 @@ import '../providers/policies_provider.dart';
 import '../widgets/shimmer_widget.dart';
 
 class PolicyListScreen extends ConsumerStatefulWidget {
-  const PolicyListScreen({super.key});
+  final String filter;
+  final String title;
+
+  const PolicyListScreen({
+    super.key,
+    this.filter = 'all',
+    this.title = 'All Policies',
+  });
 
   @override
   ConsumerState<PolicyListScreen> createState() => _PolicyListScreenState();
@@ -21,18 +28,15 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
     super.initState();
     // Fetch policies when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      final filter = args?['filter'] as String? ?? 'all';
-      ref.read(policiesProvider.notifier).setFilter(filter);
+      ref.read(policiesProvider.notifier).setFilter(widget.filter);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final policiesAsync = ref.watch(policiesProvider);
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final filter = args?['filter'] as String? ?? 'all';
-    final title = args?['title'] as String? ?? 'All Policies';
+    final filter = widget.filter;
+    final title = widget.title;
     
     return Scaffold(
       backgroundColor: AppTheme.bgColor,
