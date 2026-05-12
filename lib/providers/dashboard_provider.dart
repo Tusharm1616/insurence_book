@@ -1,49 +1,46 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
 import '../core/api_service.dart';
 
 class DashboardStats {
-  final int all_customers;
-  final int all_policies;
-  final int expired_policies;
-  final int expiring_1_month;
-  final int expiring_2_months;
-  final int active_customers;
+  final int allCustomers;
+  final int allPolicies;
+  final int expiredPolicies;
+  final int expiring1Month;
+  final int expiring2Months;
+  final int activeCustomers;
 
   DashboardStats({
-    required this.all_customers,
-    required this.all_policies,
-    required this.expired_policies,
-    required this.expiring_1_month,
-    required this.expiring_2_months,
-    required this.active_customers,
+    required this.allCustomers,
+    required this.allPolicies,
+    required this.expiredPolicies,
+    required this.expiring1Month,
+    required this.expiring2Months,
+    required this.activeCustomers,
   });
 }
 
-class DashboardNotifier extends StateNotifier<AsyncValue<DashboardStats>> {
-  DashboardNotifier(this.ref) : super(const AsyncValue.loading());
-
-  final Ref ref;
+class DashboardNotifier extends Notifier<AsyncValue<DashboardStats>> {
+  @override
+  AsyncValue<DashboardStats> build() => const AsyncValue.loading();
 
   Future<void> fetchDashboardStats() async {
     state = const AsyncValue.loading();
     try {
       final response = await ApiService().get('/api/dashboard/stats');
       final stats = DashboardStats(
-        all_customers: response.data['all_customers'] ?? 0,
-        all_policies: response.data['all_policies'] ?? 0,
-        expired_policies: response.data['expired_policies'] ?? 0,
-        expiring_1_month: response.data['expiring_1_month'] ?? 0,
-        expiring_2_months: response.data['expiring_2_months'] ?? 0,
-        active_customers: response.data['active_customers'] ?? 0,
+        allCustomers: response.data['all_customers'] ?? 0,
+        allPolicies: response.data['all_policies'] ?? 0,
+        expiredPolicies: response.data['expired_policies'] ?? 0,
+        expiring1Month: response.data['expiring_1_month'] ?? 0,
+        expiring2Months: response.data['expiring_2_months'] ?? 0,
+        activeCustomers: response.data['active_customers'] ?? 0,
       );
       state = AsyncValue.data(stats);
-    } catch (e) {
-      state = AsyncValue.error(e.toString());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
     }
   }
 }
 
-final dashboardStatsProvider = StateNotifierProvider<DashboardNotifier, AsyncValue<DashboardStats>>(
-  (ref) => DashboardNotifier(ref),
-);
+final dashboardStatsProvider =
+    NotifierProvider<DashboardNotifier, AsyncValue<DashboardStats>>(DashboardNotifier.new);

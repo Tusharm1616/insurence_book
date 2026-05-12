@@ -146,33 +146,57 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
         icon: const Icon(LucideIcons.userPlus, color: Colors.white),
         label: const Text('Add Customer', style: TextStyle(color: Colors.white)),
       ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: TextField(
+        decoration: InputDecoration(
+          hintText: 'Search by name or phone…',
+          prefixIcon: const Icon(LucideIcons.search, size: 20),
+          filled: true,
+          fillColor: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.grey.shade100,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        ),
+        onChanged: (v) => setState(() => _searchQuery = v),
+      ),
+    );
+  }
+
+  Widget _buildEmpty() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(LucideIcons.users, size: 56, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              _searchQuery.isEmpty ? 'No customers yet' : 'No customers match your search',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildCustomerList(BuildContext context, List<Customer> customers, String filter) {
-    if (customers.isEmpty) {
-      return _buildEmptyState(context, filter);
-    }
-    
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      itemCount: customers.length,
-      itemBuilder: (context, index) {
-        final customer = customers[index];
-        return _buildCustomerCard(context, customer);
-      },
-    );
-  }
-
   Widget _buildCustomerCard(BuildContext context, Customer customer) {
-    // Get initials for avatar
-    final initials = customer.fullName.isNotEmpty
-        ? customer.fullName.split(' ').map((word) => word[0]).toUpperCase()
-        : 'C';
-    
+    final initials = customer.fullName.trim().isEmpty
+        ? 'C'
+        : customer.fullName
+            .split(RegExp(r'\s+'))
+            .where((w) => w.isNotEmpty)
+            .map((w) => w[0].toUpperCase())
+            .take(2)
+            .join();
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 0,
@@ -186,24 +210,21 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar circle
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: AppTheme.infoColor.withOpacity(0.1),
+                  backgroundColor: AppColors.primary.withValues(alpha: 0.12),
                   child: Text(
                     initials,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: AppColors.primary,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      fontFamily: 'Poppins',
                     ),
                   ),
-                
+                ),
                 const SizedBox(width: 16),
-                
-                // Customer info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,152 +241,115 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Text(
-                            customer.mobileNumber,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF6B7280),
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            customer.email ?? '',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF6B7280),
-                              fontFamily: 'Poppins',
+                          Expanded(
+                            child: Text(
+                              customer.mobileNumber,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF6B7280),
+                                fontFamily: 'Poppins',
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text(
-                            customer.city ?? '',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF6B7280),
-                              fontFamily: 'Poppins',
-                            ),
+                      if (customer.email != null && customer.email!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          customer.email!,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF6B7280),
+                            fontFamily: 'Poppins',
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            customer.state ?? '',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF6B7280),
-                              fontFamily: 'Poppins',
-                            ),
+                        ),
+                      ],
+                      if ((customer.city ?? '').isNotEmpty || (customer.state ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '${customer.city ?? ''}${(customer.city ?? '').isNotEmpty && (customer.state ?? '').isNotEmpty ? ', ' : ''}${customer.state ?? ''}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF6B7280),
+                            fontFamily: 'Poppins',
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: customer.isActive ? Colors.green.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    customer.isActive ? 'Active' : 'Inactive',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: customer.isActive ? Colors.green : Colors.grey,
+                    ),
                   ),
                 ),
               ],
             ),
-            
-            const SizedBox(height: 12),
-            
-            // Row of chips
+            const SizedBox(height: 16),
             Row(
               children: [
-                // Status chip
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: customer.isActive ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-            const SizedBox(height: 16),
-
-            // ── Action Buttons Row 1 ────────────────────────────
-            Row(children: [
-              Expanded(child: _outlineButton(
-                'WhatsApp',
-                LucideIcons.messageCircle,
-                Colors.green,
-                () => _openWhatsApp(context, customer.mobileNumber),
-              )),
-              const SizedBox(width: 12),
-              Expanded(child: _outlineButton(
-                'Call',
-                LucideIcons.phone,
-                Colors.blue,
-                () => _makeCall(context, customer.mobileNumber),
-              )),
-            ]),
-            const SizedBox(height: 8),
-
-            // ── Action Buttons Row 2 ────────────────────────────
-            Row(children: [
-              Expanded(child: _filledButton(
-                customer.isActive ? 'Deactivate' : 'Activate',
-                customer.isActive ? LucideIcons.ban : LucideIcons.checkCircle,
-                customer.isActive ? AppColors.warning : Colors.green,
-                () => _deactivateOrActivate(context, customer),
-              )),
-              const SizedBox(width: 12),
-              Expanded(child: _filledButton(
-                'All Policy',
-                LucideIcons.shield,
-                AppColors.primary,
-                () => Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => CustomerPolicyScreen(
-                    customerId: customer.id,
-                    customerName: customer.fullName,
+                Expanded(
+                  child: _outlineButton(
+                    'WhatsApp',
+                    LucideIcons.messageCircle,
+                    Colors.green,
+                    () => _openWhatsApp(context, customer.mobileNumber),
                   ),
-                )),
-              )),
-            ]),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _outlineButton(
+                    'Call',
+                    LucideIcons.phone,
+                    Colors.blue,
+                    () => _makeCall(context, customer.mobileNumber),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _filledButton(
+                    customer.isActive ? 'Deactivate' : 'Activate',
+                    customer.isActive ? LucideIcons.ban : LucideIcons.checkCircle,
+                    customer.isActive ? AppColors.warning : Colors.green,
+                    () => _deactivateOrActivate(context, customer),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _filledButton(
+                    'All Policy',
+                    LucideIcons.shield,
+                    AppColors.primary,
+                    () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CustomerPolicyScreen(
+                          customerId: customer.id,
+                          customerName: customer.fullName,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildCredentialsBox(Customer customer) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark 
-            ? Colors.white.withValues(alpha: 0.05) 
-            : Colors.grey.shade100, 
-        borderRadius: BorderRadius.circular(8)
-      ),
-      child: Row(children: [
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            const Icon(LucideIcons.user, size: 14, color: Colors.grey),
-            const SizedBox(width: 4),
-            Text('ID: ${customer.generatedUsername ?? 'N/A'}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-          ]),
-          const SizedBox(height: 4),
-          Row(children: [
-            const Icon(LucideIcons.lock, size: 14, color: Colors.grey),
-            const SizedBox(width: 4),
-            Text('Pass: ${customer.generatedPassword ?? 'N/A'}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-          ]),
-        ])),
-        ElevatedButton.icon(
-          onPressed: () {
-            final text = 'ID: ${customer.generatedUsername}, Pass: ${customer.generatedPassword}';
-            Clipboard.setData(ClipboardData(text: text));
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Credentials copied to clipboard!'),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.green,
-            ));
-          },
-          icon: const Icon(LucideIcons.copy, size: 14),
-          label: const Text('Copy'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary, foregroundColor: Colors.white,
-            minimumSize: const Size(80, 32), padding: const EdgeInsets.symmetric(horizontal: 12),
-          ),
-        ),
-      ]),
     );
   }
 

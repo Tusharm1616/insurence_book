@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
@@ -42,13 +42,13 @@ class AppTheme {
           fontFamily: 'Poppins',
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: Colors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        shadowColor: Colors.black.withOpacity(0.08),
+        shadowColor: Colors.black.withValues(alpha: 0.08),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -186,19 +186,19 @@ class AppTheme {
           fontFamily: 'Poppins',
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: const Color(0xFF1E1E1E),
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
-        shadowColor: Colors.black.withOpacity(0.08),
+        shadowColor: Colors.black.withValues(alpha: 0.08),
       ),
       textTheme: GoogleFonts.poppinsTextTheme().copyWith(
         bodyLarge: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
-          color: Color(0xFFE1E1E1E),
+          color: Color(0xFFE1E1E1),
           fontFamily: 'Poppins',
         ),
         bodyMedium: const TextStyle(
@@ -216,19 +216,19 @@ class AppTheme {
         headlineLarge: const TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w600,
-          color: Color(0xFFE1E1E1E),
+          color: Color(0xFFE1E1E1),
           fontFamily: 'Poppins',
         ),
         headlineMedium: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w600,
-          color: Color(0xFFE1E1E1E),
+          color: Color(0xFFE1E1E1),
           fontFamily: 'Poppins',
         ),
         headlineSmall: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
-          color: Color(0xFFE1E1E1E),
+          color: Color(0xFFE1E1E1),
           fontFamily: 'Poppins',
         ),
         labelLarge: const TextStyle(
@@ -273,7 +273,7 @@ class AppTheme {
         backgroundColor: const Color(0xFF2A2A2A),
         selectedColor: Colors.white,
         labelStyle: const TextStyle(
-          color: Color(0xFFE1E1E1E),
+          color: Color(0xFFE1E1E1),
           fontFamily: 'Poppins',
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

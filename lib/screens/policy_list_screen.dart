@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shimmer/shimmer.dart';
 
 import '../core/app_theme.dart';
 import '../providers/policies_provider.dart';
@@ -16,7 +14,6 @@ class PolicyListScreen extends ConsumerStatefulWidget {
 }
 
 class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
-  final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -32,7 +29,6 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final policiesAsync = ref.watch(policiesProvider);
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final filter = args?['filter'] as String? ?? 'all';
@@ -69,17 +65,17 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
         child: policiesAsync.when(
           data: (response) => _buildPolicyList(context, response.data, filter),
           loading: () => _buildLoadingState(),
-          error: (error) => _buildErrorState(error),
+          error: (err, _) => _buildErrorState(err.toString()),
         ),
       ),
     );
   }
 
-  Widget _buildPolicyList(BuildContext context, List<dynamic> policies, String filter) {
+  Widget _buildPolicyList(BuildContext context, List<PolicyData> policies, String filter) {
     if (policies.isEmpty) {
       return _buildEmptyState(context, filter);
     }
-    
+
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.all(16),
@@ -91,7 +87,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
     );
   }
 
-  Widget _buildPolicyCard(BuildContext context, dynamic policy) {
+  Widget _buildPolicyCard(BuildContext context, PolicyData policy) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 0,
@@ -110,7 +106,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    policy['policy_number'] ?? '',
+                    policy.policy_number,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -122,13 +118,13 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getPolicyTypeColor(policy['policy_type']).withOpacity(0.1),
+                    color: _getPolicyTypeColor(policy.policy_type).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    policy['policy_type'] ?? '',
+                    policy.policy_type,
                     style: TextStyle(
-                      color: _getPolicyTypeColor(policy['policy_type']),
+                      color: _getPolicyTypeColor(policy.policy_type),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Poppins',
@@ -150,7 +146,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  policy['customer']['full_name'] ?? '',
+                  policy.customer.full_name,
                   style: const TextStyle(
                     fontSize: 13,
                     color: Color(0xFF6B7280),
@@ -165,7 +161,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  policy['customer']['phone'] ?? '',
+                  policy.customer.phone,
                   style: const TextStyle(
                     fontSize: 13,
                     color: Color(0xFF6B7280),
@@ -179,7 +175,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
             
             // Insurer and plan
             Text(
-              '${policy['insurer_name'] ?? ''} — ${policy['plan_name'] ?? ''}',
+              '${policy.insurer_name} — ${policy.plan_name}',
               style: const TextStyle(
                 fontSize: 14,
                 color: Color(0xFF6B7280),
@@ -194,7 +190,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Sum Insured: ₹${_formatCurrency(policy['sum_insured'])}',
+                    'Sum Insured: ₹${_formatCurrency(policy.sum_insured)}',
                     style: const TextStyle(
                       fontSize: 13,
                       color: Color(0xFF1C1C1C),
@@ -204,7 +200,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
                 ),
                 Expanded(
                   child: Text(
-                    'Premium: ₹${_formatCurrency(policy['premium_amount'])}',
+                    'Premium: ₹${_formatCurrency(policy.premium_amount)}',
                     style: const TextStyle(
                       fontSize: 13,
                       color: Color(0xFF1C1C1C),
@@ -219,7 +215,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
             
             // Period
             Text(
-              'Period: ${_formatDate(policy['start_date'])} → ${_formatDate(policy['end_date'])}',
+              'Period: ${_formatDate(policy.start_date)} → ${_formatDate(policy.end_date)}',
               style: const TextStyle(
                 fontSize: 13,
                 color: Color(0xFF6B7280),
@@ -237,13 +233,13 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getPolicyStatusColor(policy['status']).withOpacity(0.1),
+                    color: _getPolicyStatusColor(policy.status).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    policy['status'] ?? '',
+                    policy.status,
                     style: TextStyle(
-                      color: _getPolicyStatusColor(policy['status']),
+                      color: _getPolicyStatusColor(policy.status),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Poppins',
@@ -255,13 +251,13 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getDaysRemainingColor(policy['days_remaining']).withOpacity(0.1),
+                    color: _getDaysRemainingColor(policy.days_remaining).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    _getDaysRemainingText(policy['days_remaining']),
+                    _getDaysRemainingText(policy.days_remaining),
                     style: TextStyle(
-                      color: _getDaysRemainingColor(policy['days_remaining']),
+                      color: _getDaysRemainingColor(policy.days_remaining),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Poppins',
@@ -319,7 +315,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppTheme.warningColor.withOpacity(0.1),
+                color: AppTheme.warningColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -331,15 +327,16 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
             const SizedBox(height: 24),
             Text(
               emptyMessage,
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF1C1C1C),
                 fontFamily: 'Poppins',
               ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -367,13 +364,13 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
           const SizedBox(height: 16),
           Text(
             error,
+            textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
               color: AppTheme.dangerColor,
               fontFamily: 'Poppins',
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
@@ -406,7 +403,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
 
   String _formatCurrency(double amount) {
     return amount.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+$'),
+      RegExp(r'(\d{1,3})(?=(\d{3})+$)'),
       (match) => '${match[1]}${match[2] != null ? ',' : ''}${match[2] ?? ''}',
     );
   }
@@ -469,13 +466,13 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
     } else if (daysRemaining == 0) {
       return 'Expires Today';
     } else {
-      return '${daysRemaining} days left';
+      return '$daysRemaining days left';
     }
   }
 }
 
 class _SearchDelegate extends SearchDelegate<String> {
-  final Ref ref;
+  final WidgetRef ref;
 
   _SearchDelegate(this.ref);
 
@@ -486,7 +483,6 @@ class _SearchDelegate extends SearchDelegate<String> {
         icon: const Icon(Icons.clear),
         onPressed: () {
           query = '';
-          close(context, null);
         },
         tooltip: 'Clear search',
       ),
@@ -494,17 +490,36 @@ class _SearchDelegate extends SearchDelegate<String> {
   }
 
   @override
-  Widget buildResults(BuildContext context, List<String> suggestions) {
-    return Container();
+  Widget buildResults(BuildContext context) {
+    ref.read(policiesProvider.notifier).setSearchQuery(query);
+    return Center(
+      child: TextButton(
+        onPressed: () => close(context, query),
+        child: const Text('Close'),
+      ),
+    );
   }
 
   @override
   Widget buildLeading(BuildContext context) {
-    return const Icon(Icons.search);
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () => close(context, ''),
+    );
   }
 
   @override
-  Widget buildSuggestions(BuildContext context, TextEditingController controller) {
-    return Container();
+  Widget buildSuggestions(BuildContext context) {
+    if (query.isEmpty) {
+      return const Center(child: Text('Enter a policy or customer search term'));
+    }
+    return ListTile(
+      leading: const Icon(Icons.search),
+      title: Text('Search for "$query"'),
+      onTap: () {
+        ref.read(policiesProvider.notifier).setSearchQuery(query);
+        showResults(context);
+      },
+    );
   }
 }

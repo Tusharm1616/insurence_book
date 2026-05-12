@@ -1,28 +1,27 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
 import '../core/api_service.dart';
 
 class CustomerData {
   final String id;
-  final String full_name;
+  final String fullName;
   final String phone;
   final String email;
   final String city;
   final String status;
-  final int total_policies;
-  final int active_policies;
-  final String latest_policy_end_date;
+  final int totalPolicies;
+  final int activePolicies;
+  final String latestPolicyEndDate;
 
   CustomerData({
     required this.id,
-    required this.full_name,
+    required this.fullName,
     required this.phone,
     required this.email,
     required this.city,
     required this.status,
-    required this.total_policies,
-    required this.active_policies,
-    required this.latest_policy_end_date,
+    required this.totalPolicies,
+    required this.activePolicies,
+    required this.latestPolicyEndDate,
   });
 }
 
@@ -40,21 +39,21 @@ class CustomerListResponse {
   });
 }
 
-class CustomersNotifier extends StateNotifier<AsyncValue<CustomerListResponse>> {
-  CustomersNotifier(this.ref) : super(const AsyncValue.loading());
-
-  final Ref ref;
+class CustomersNotifier extends Notifier<AsyncValue<CustomerListResponse>> {
   int _currentPage = 1;
   String _currentFilter = 'all';
   String _searchQuery = '';
   final List<CustomerData> _allCustomers = [];
+
+  @override
+  AsyncValue<CustomerListResponse> build() => const AsyncValue.loading();
 
   Future<void> fetchCustomers({bool refresh = false}) async {
     if (refresh) {
       _currentPage = 1;
       _allCustomers.clear();
     }
-    
+
     state = const AsyncValue.loading();
     try {
       final queryParams = <String, dynamic>{
@@ -63,7 +62,7 @@ class CustomersNotifier extends StateNotifier<AsyncValue<CustomerListResponse>> 
         'status': _currentFilter,
         if (_searchQuery.isNotEmpty) 'search': _searchQuery,
       };
-      
+
       final response = await ApiService().get('/api/customers', queryParameters: queryParams);
       final customerListResponse = CustomerListResponse(
         total: response.data['total'] ?? 0,
@@ -71,19 +70,19 @@ class CustomersNotifier extends StateNotifier<AsyncValue<CustomerListResponse>> 
         pages: response.data['pages'] ?? 1,
         data: (response.data['data'] as List)
             .map((customer) => CustomerData(
-              id: customer['id'] ?? '',
-              full_name: customer['full_name'] ?? '',
-              phone: customer['phone'] ?? '',
-              email: customer['email'] ?? '',
-              city: customer['city'] ?? '',
-              status: customer['status'] ?? 'active',
-              total_policies: customer['total_policies'] ?? 0,
-              active_policies: customer['active_policies'] ?? 0,
-              latest_policy_end_date: customer['latest_policy_end_date'] ?? '',
-            ))
+                  id: customer['id'] ?? '',
+                  fullName: customer['full_name'] ?? '',
+                  phone: customer['phone'] ?? '',
+                  email: customer['email'] ?? '',
+                  city: customer['city'] ?? '',
+                  status: customer['status'] ?? 'active',
+                  totalPolicies: customer['total_policies'] ?? 0,
+                  activePolicies: customer['active_policies'] ?? 0,
+                  latestPolicyEndDate: customer['latest_policy_end_date'] ?? '',
+                ))
             .toList(),
       );
-      
+
       if (refresh) {
         _allCustomers.clear();
         _allCustomers.addAll(customerListResponse.data);
@@ -95,14 +94,14 @@ class CustomersNotifier extends StateNotifier<AsyncValue<CustomerListResponse>> 
           _allCustomers.addAll(customerListResponse.data);
         }
       }
-      
+
       state = AsyncValue.data(customerListResponse);
-    } catch (e) {
-      state = AsyncValue.error(e.toString());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
     }
   }
 
-  void loadMoreCustomers() async {
+  Future<void> loadMoreCustomers() async {
     _currentPage++;
     await fetchCustomers();
   }
@@ -121,11 +120,10 @@ class CustomersNotifier extends StateNotifier<AsyncValue<CustomerListResponse>> 
     fetchCustomers();
   }
 
-  void refreshCustomers() async {
+  Future<void> refreshCustomers() async {
     await fetchCustomers(refresh: true);
   }
 }
 
-final customersProvider = StateNotifierProvider<CustomersNotifier, AsyncValue<CustomerListResponse>>(
-  (ref) => CustomersNotifier(ref),
-);
+final customersProvider =
+    NotifierProvider<CustomersNotifier, AsyncValue<CustomerListResponse>>(CustomersNotifier.new);
