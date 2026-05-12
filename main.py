@@ -45,6 +45,12 @@ async def init_db():
                     "ALTER TABLE policies ADD COLUMN IF NOT EXISTS vehicle_reg_no VARCHAR(20);",
                     "ALTER TABLE customers ADD COLUMN IF NOT EXISTS date_of_birth DATE;",
                     "ALTER TABLE customers ADD COLUMN IF NOT EXISTS anniversary_date DATE;",
+                    # Fix missing columns in policies table
+                    "ALTER TABLE policies ALTER COLUMN policy_number SET NOT NULL DEFAULT '';",
+                    "ALTER TABLE policies ALTER COLUMN policy_type SET NOT NULL DEFAULT 'Other';",
+                    "ALTER TABLE policies ALTER COLUMN status SET NOT NULL DEFAULT 'active';",
+                    "ALTER TABLE policies ALTER COLUMN issue_date SET NOT NULL DEFAULT CURRENT_DATE;",
+                    "ALTER TABLE policies ALTER COLUMN expiry_date SET NOT NULL DEFAULT CURRENT_DATE + INTERVAL '1 year';",
                     # Motor insurance tables creation
                     """
                     CREATE TABLE IF NOT EXISTS motor_insurance_policies (

@@ -267,10 +267,33 @@ async def create_policy(
         
     except Exception as e:
         await db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create policy: {str(e)}"
-        )
+        
+        # Log the full error for debugging
+        import logging
+        logging.error(f"Policy creation failed: {str(e)}", exc_info=True)
+        
+        # Provide specific error messages
+        error_msg = str(e).lower()
+        if "duplicate key" in error_msg or "unique constraint" in error_msg:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Policy number '{policy_number}' already exists. Please use a different one."
+            )
+        elif "foreign key constraint" in error_msg:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid customer ID. Please verify the customer exists."
+            )
+        elif "not-null constraint" in error_msg or "null value" in error_msg:
+            raise HTTPException(
+                status_code=400,
+                detail="Required field is missing. Please check all required fields."
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to create policy: {str(e)}"
+            )
 
 
 # ── GET /policies/ ───────────────────────────────────────────────────────────
