@@ -4,12 +4,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
-  ApiService._internal();
 
-  late Dio _dio;
-  final _baseUrl = 'http://localhost:8000'; // Update with your backend URL
+  late final Dio _dio;
+  final _baseUrl = 'https://insurencebook-production.up.railway.app'; // Railway production backend
 
-  ApiService() {
+  ApiService._internal() {
     _dio = Dio(BaseOptions(
       baseUrl: _baseUrl,
       connectTimeout: const Duration(seconds: 30),
@@ -20,7 +19,6 @@ class ApiService {
       },
     ));
 
-    // Add auth interceptor
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
@@ -28,15 +26,13 @@ class ApiService {
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
-          return handler.next(options);
+          handler.next(options);
         },
         onError: (error, handler) async {
           if (error.response?.statusCode == 401) {
-            // Token expired, clear storage
             await _clearAuthToken();
-            // You can navigate to login screen here
           }
-          return handler.next(error);
+          handler.next(error);
         },
       ),
     );
@@ -86,28 +82,7 @@ class ApiService {
     try {
       await FlutterSecureStorage().delete(key: 'auth_token');
     } catch (e) {
-      // Handle error
+      // ignore
     }
   }
 }
-
-class InterceptorsWrapper {
-  final Function(RequestOptions, RequestInterceptorHandler) onRequest;
-  final Function(DioException, ErrorInterceptorHandler) onError;
-
-  InterceptorsWrapper({
-    required this.onRequest,
-    required this.onError,
-  });
-
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    onRequest(options, handler);
-  }
-
-  void onError(DioException error, ErrorInterceptorHandler handler) {
-    onError(error, handler);
-  }
-}
-
-typedef RequestInterceptorHandler = void Function(RequestOptions options);
-typedef ErrorInterceptorHandler = void Function(DioException error);
