@@ -1,38 +1,42 @@
-from sqlalchemy import Column, Integer, String, Date, Float, ForeignKey, Index, text
+from sqlalchemy import Column, String, Date, ForeignKey, Text, Index
+from sqlalchemy.dialects.postgresql import UUID, NUMERIC
 from sqlalchemy.orm import relationship
 from database import Base
+import uuid
 
 class Policy(Base):
     __tablename__ = "policies"
 
-    id = Column(Integer, primary_key=True, index=True)
-    customer_id = Column(Integer, ForeignKey("customers.id", ondelete="CASCADE"))
-    agent_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    customer_id = Column(UUID(as_uuid=True), ForeignKey("customers.id", ondelete="CASCADE"))
     
-    policy_number = Column(String(100), unique=True, index=True, nullable=False)
-    policy_type = Column(String(20), nullable=False) # Life, Health, Motor, etc.
-    status = Column(String(30), nullable=False) # live, lapsed, matured, paidup, premium holiday, expired
-    insurer_name = Column(String(100))
-    plan_name = Column(String) # Existing field, keep it
+    policy_number = Column(String(60), unique=True, nullable=False, index=True)
+    policy_type = Column(String(60), nullable=False)  # e.g. 'Motor', 'Health', 'Life', 'Term'
+    insurer_name = Column(String(120))
+    plan_name = Column(String(120))
     
-    premium_amount = Column(Float)
-    premium_due_date = Column(Date)
+    sum_insured = Column(NUMERIC(14, 2))
+    premium_amount = Column(NUMERIC(12, 2))
+    payment_mode = Column(String(20))  # 'Monthly','Quarterly','Annual'
     
-    issue_date = Column(Date) # Existing field
-    expiry_date = Column(Date)
-    maturity_date = Column(Date)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+    status = Column(String(20), default='active')  # 'active' | 'expired' | 'lapsed' | 'paidup' | 'matured'
     
-    sum_assured = Column(Float)
-    ncb_percent = Column(Float, default=0.0)
-    vehicle_reg_no = Column(String(20))
-    nominee_name = Column(String(100), nullable=True)
-    nominee_relation = Column(String(50), nullable=True)
+    nominee_name = Column(String(120))
+    nominee_relation = Column(String(60))
+    notes = Column(Text)
+    
+    # Timestamps
+    created_at = Column(Date, server_default='now()')
+    updated_at = Column(Date, server_default='now()')
     
     # Relationships
     customer = relationship("Customer", back_populates="policies")
     agent = relationship("User", foreign_keys=[agent_id])
 
-# Performance Indexes (SQLAlchemy syntax for partial indexes might be complex, 
-# but we can create the basic ones here, and execute raw SQL for partials in main.py)
+# Performance Indexes
 Index('ix_policies_agent_status', Policy.agent_id, Policy.status)
 Index('ix_policies_agent_type', Policy.agent_id, Policy.policy_type)
+Index('ix_policies_customer_id', Policy.customer_id)

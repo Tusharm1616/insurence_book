@@ -18,7 +18,7 @@ from utils.auth import verify_password, get_password_hash, create_access_token, 
 from models.users import User, UserRole
 
 from fastapi.middleware.cors import CORSMiddleware
-from routes import auth, customers, policies, dashboard, life_insurance, reminders, motor, two_wheeler, add_policy, vehicle, terms, vehicle_documents
+from routes import auth, customers, policies, dashboard, life_insurance, reminders, motor, two_wheeler, add_policy, vehicle, terms, vehicle_documents, customers_api, policies_api
 
 # Rate limiting configuration
 limiter = Limiter(key_func=get_remote_address)
@@ -330,6 +330,8 @@ app.include_router(add_policy.router)
 app.include_router(vehicle.router)
 app.include_router(terms.router)
 app.include_router(vehicle_documents.router)
+app.include_router(customers_api.router)
+app.include_router(policies_api.router)
 
 from datetime import datetime
 

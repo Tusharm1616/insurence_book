@@ -1,43 +1,30 @@
-from sqlalchemy import Column, Integer, String, Date, Float, ForeignKey
+from sqlalchemy import Column, String, Date, ForeignKey, Text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from database import Base
+import uuid
 
 class Customer(Base):
     __tablename__ = "customers"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    agent_id = Column(Integer, ForeignKey("users.id"))
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    agent_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
     
     # Personal Details
-    full_name = Column(String)
-    mobile_number = Column(String)
-    email = Column(String, nullable=True)
-    state = Column(String)
-    city = Column(String)
-    address = Column(String)
-    dob = Column(Date, nullable=True)
-    anniversary_date = Column(Date, nullable=True)
+    full_name = Column(String(150), nullable=False)
+    phone = Column(String(15))
+    email = Column(String(100))
+    dob = Column(Date)
+    address = Column(Text)
+    city = Column(String(80))
+    state = Column(String(80))
+    pincode = Column(String(10))
+    status = Column(String(20), default='active')  # 'active' | 'inactive'
     
-    # Health/Personal Info
-    gender = Column(String, nullable=True)
-    height = Column(String, nullable=True)
-    weight_kg = Column(Float, nullable=True)
-    education = Column(String, nullable=True)
-    marital_status = Column(String, nullable=True)
-    
-    # Business/Job
-    business_job_type = Column(String, nullable=True)
-    business_job_name = Column(String, nullable=True)
-    duty_type = Column(String, nullable=True)
-    annual_income = Column(Float, nullable=True)
-    pan_no = Column(String, nullable=True)
-    gst_no = Column(String, nullable=True)
-    
-    # Status
-    is_active = Column(Integer, default=1) # 1 for active, 0 for inactive
+    # Timestamps
+    created_at = Column(Date, server_default='now()')
+    updated_at = Column(Date, server_default='now()')
     
     # Relationships
-    user = relationship("User", back_populates="customer_profile", foreign_keys=[user_id])
     agent = relationship("User", back_populates="managed_customers", foreign_keys=[agent_id])
     policies = relationship("Policy", back_populates="customer")
