@@ -78,7 +78,7 @@ async def api_register_agent(user_in: AgentRegister, db: AsyncSession = Depends(
     return RegisterResponse(
         message="success",
         agent=AgentResponse(
-            id=new_user.id,
+            id=str(new_user.id),
             name=new_user.full_name,
             email=new_user.email,
             license_no=new_user.license_no
@@ -104,7 +104,7 @@ async def api_login(login_data: AgentLogin, db: AsyncSession = Depends(get_db)):
     return LoginResponse(
         token=access_token,
         agent=AgentResponse(
-            id=user.id,
+            id=str(user.id),
             name=user.full_name,
             email=user.email or user.username,
             license_no=user.license_no
@@ -151,7 +151,7 @@ async def change_password(
 @api_auth_router.get("/profile", response_model=AgentResponse)
 async def get_profile(current_user: User = Depends(get_current_user)):
     return AgentResponse(
-        id=current_user.id,
+        id=str(current_user.id),
         name=current_user.full_name,
         email=current_user.email or current_user.username,
         license_no=current_user.license_no
