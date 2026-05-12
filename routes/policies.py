@@ -261,9 +261,29 @@ async def create_policy(
         await db.commit()
         await db.refresh(new_policy)
 
-        # Reload with customer relationship
-        await db.refresh(new_policy, ["customer"])
-        return _policy_to_response(new_policy)
+        # Build response using already-fetched customer (avoids async lazy-load failure)
+        return {
+            "id": new_policy.id,
+            "agent_id": new_policy.agent_id,
+            "customer_id": new_policy.customer_id,
+            "customer_name": customer.full_name,
+            "policy_number": new_policy.policy_number,
+            "policy_type": new_policy.policy_type,
+            "insurer_name": new_policy.insurer_name,
+            "plan_name": new_policy.plan_name,
+            "sum_assured": new_policy.sum_assured or 0.0,
+            "premium_amount": new_policy.premium_amount or 0.0,
+            "issue_date": new_policy.issue_date,
+            "expiry_date": new_policy.expiry_date,
+            "premium_due_date": new_policy.premium_due_date,
+            "maturity_date": new_policy.maturity_date,
+            "status": new_policy.status,
+            "computed_status": _compute_status(new_policy),
+            "ncb_percent": new_policy.ncb_percent or 0.0,
+            "vehicle_reg_no": new_policy.vehicle_reg_no,
+            "nominee_name": new_policy.nominee_name,
+            "nominee_relation": new_policy.nominee_relation,
+        }
         
     except Exception as e:
         await db.rollback()
