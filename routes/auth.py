@@ -100,7 +100,7 @@ async def api_login(login_data: AgentLogin, db: AsyncSession = Depends(get_db)):
         if not user or not verify_password(login_data.password, user.hashed_password):
             raise HTTPException(status_code=401, detail="Invalid email or password")
             
-        access_token = create_access_token(data={"sub": user.username, "role": user.role})
+        access_token = create_access_token(data={"sub": user.email or user.username, "role": user.role})
         
         return LoginResponse(
             token=access_token,

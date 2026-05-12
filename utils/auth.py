@@ -52,6 +52,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import func
 from database import get_db
 from models.users import User
 
@@ -71,7 +72,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     except JWTError:
         raise credentials_exception
         
-    result = await db.execute(select(User).where(User.username == username))
+    result = await db.execute(select(User).where(
+        (func.lower(User.username) == username.lower()) | 
+        (func.lower(User.email) == username.lower())
+    ))
     user = result.scalars().first()
     if user is None:
         raise credentials_exception
