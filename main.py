@@ -299,12 +299,14 @@ async def log_requests(request: Request, call_next):
 # Global Exception Handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
     logging.error(f"Unhandled error: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
         content={
             "detail": "An internal server error occurred.",
             "error_type": str(type(exc).__name__),
+            "traceback": traceback.format_exc(),
             "timestamp": datetime.utcnow().isoformat()
         },
     )

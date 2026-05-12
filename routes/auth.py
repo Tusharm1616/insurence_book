@@ -87,29 +87,35 @@ async def api_register_agent(user_in: AgentRegister, db: AsyncSession = Depends(
 
 @api_auth_router.post("/login", response_model=LoginResponse)
 async def api_login(login_data: AgentLogin, db: AsyncSession = Depends(get_db)):
-    email = login_data.email.lower()
-    result = await db.execute(select(User).where(func.lower(User.email) == email))
-    user = result.scalars().first()
-    
-    # Fallback to checking username if email wasn't matched
-    if not user:
-        result = await db.execute(select(User).where(func.lower(User.username) == email))
+    try:
+        email = login_data.email.lower()
+        result = await db.execute(select(User).where(func.lower(User.email) == email))
         user = result.scalars().first()
         
-    if not user or not verify_password(login_data.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        # Fallback to checking username if email wasn't matched
+        if not user:
+            result = await db.execute(select(User).where(func.lower(User.username) == email))
+            user = result.scalars().first()
+            
+        if not user or not verify_password(login_data.password, user.hashed_password):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+            
+        access_token = create_access_token(data={"sub": user.username, "role": user.role})
         
-    access_token = create_access_token(data={"sub": user.username, "role": user.role})
-    
-    return LoginResponse(
-        token=access_token,
-        agent=AgentResponse(
-            id=str(user.id),
-            name=user.full_name,
-            email=user.email or user.username,
-            license_no=user.license_no
+        return LoginResponse(
+            token=access_token,
+            agent=AgentResponse(
+                id=str(user.id),
+                name=user.full_name,
+                email=user.email or user.username,
+                license_no=user.license_no
+            )
         )
-    )
+    except Exception as e:
+        import traceback
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=traceback.format_exc())
 
 @api_auth_router.post("/forgot-password")
 async def api_forgot_password(request: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
