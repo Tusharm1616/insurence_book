@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/app_theme.dart';
+import '../core/theme.dart';
 import '../providers/customer_detail_provider.dart';
 
 class CustomerDetailScreen extends ConsumerStatefulWidget {
@@ -20,7 +20,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
     final customerDetailAsync = ref.watch(customerDetailProvider(widget.customerId));
     
     return Scaffold(
-      backgroundColor: AppTheme.bgColor,
+      backgroundColor: AppThemeHelper.scaffoldBg(context),
       appBar: AppBar(
         title: customerDetailAsync.when(
           data: (customer) => Text(
@@ -48,7 +48,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
             ),
           ),
         ),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -191,7 +191,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
               icon: const Icon(Icons.add, size: 16),
               label: const Text('Add Policy'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -406,7 +406,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           Icon(
             Icons.error_outline,
             size: 64,
-            color: AppTheme.dangerColor,
+            color: AppColors.danger,
           ),
           const SizedBox(height: 16),
           Text(
@@ -414,7 +414,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: AppTheme.dangerColor,
+              color: AppColors.danger,
               fontFamily: 'Poppins',
             ),
             textAlign: TextAlign.center,
@@ -427,7 +427,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
             icon: const Icon(Icons.refresh),
             label: const Text('Retry'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

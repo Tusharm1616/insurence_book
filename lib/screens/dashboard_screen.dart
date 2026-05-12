@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/app_theme.dart';
+import '../core/theme.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/stats_tile.dart';
 import '../widgets/shimmer_widget.dart';
@@ -29,7 +29,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final dashboardStatsAsync = ref.watch(dashboardStatsProvider);
     
     return Scaffold(
-      backgroundColor: AppTheme.bgColor,
+      backgroundColor: AppThemeHelper.scaffoldBg(context),
       appBar: AppBar(
         title: const Text(
           'Statistics Overview',
@@ -39,7 +39,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             fontFamily: 'Poppins',
           ),
         ),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -68,7 +68,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Text(
             'Statistics Overview',
             style: theme.textTheme.headlineLarge?.copyWith(
-              color: AppTheme.primaryColor,
+              color: AppColors.primary,
               fontFamily: 'Poppins',
             ),
           ),
@@ -86,10 +86,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               // All Customers Tile
               StatsTile(
                 icon: Icons.people_alt_outlined,
-                iconColor: AppTheme.infoColor,
+                iconColor: AppColors.info,
                 title: 'All Customers',
                 count: stats.allCustomers,
-                countColor: AppTheme.infoColor,
+                countColor: AppColors.info,
                 onTap: () {
                   Navigator.pushNamed(context, '/customer_list', arguments: {
                     'filter': 'all',
@@ -101,10 +101,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               // All Policies Tile
               StatsTile(
                 icon: Icons.shield_outlined,
-                iconColor: AppTheme.primaryColor,
+                iconColor: AppColors.primary,
                 title: 'All Policies',
                 count: stats.allPolicies,
-                countColor: AppTheme.primaryColor,
+                countColor: AppColors.primary,
                 onTap: () {
                   Navigator.pushNamed(context, '/policy_list', arguments: {
                     'filter': 'all',
@@ -116,10 +116,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               // Expired Policy Tile
               StatsTile(
                 icon: Icons.warning_amber_outlined,
-                iconColor: AppTheme.dangerColor,
+                iconColor: AppColors.danger,
                 title: 'Expired Policy',
                 count: stats.expiredPolicies,
-                countColor: AppTheme.dangerColor,
+                countColor: AppColors.danger,
                 onTap: () {
                   Navigator.pushNamed(context, '/policy_list', arguments: {
                     'filter': 'expired',
@@ -131,10 +131,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               // Expiring Within 1 Month Tile
               StatsTile(
                 icon: Icons.calendar_month_outlined,
-                iconColor: AppTheme.warningColor,
+                iconColor: AppColors.warning,
                 title: 'Expiring Within 1 Month',
                 count: stats.expiring1Month,
-                countColor: AppTheme.warningColor,
+                countColor: AppColors.warning,
                 onTap: () {
                   Navigator.pushNamed(context, '/policy_list', arguments: {
                     'filter': 'expiring_1m',
@@ -146,10 +146,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               // Expiring Within 2 Months Tile
               StatsTile(
                 icon: Icons.calendar_today_outlined,
-                iconColor: AppTheme.amberColor,
+                iconColor: AppColors.amber,
                 title: 'Expiring Within 2 Months',
                 count: stats.expiring2Months,
-                countColor: AppTheme.amberColor,
+                countColor: AppColors.amber,
                 onTap: () {
                   Navigator.pushNamed(context, '/policy_list', arguments: {
                     'filter': 'expiring_2m',
@@ -161,10 +161,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               // Active Customers Tile
               StatsTile(
                 icon: Icons.person_pin_outlined,
-                iconColor: AppTheme.tealColor,
+                iconColor: AppColors.teal,
                 title: 'Active Customers',
                 count: stats.activeCustomers,
-                countColor: AppTheme.tealColor,
+                countColor: AppColors.teal,
                 onTap: () {
                   Navigator.pushNamed(context, '/customer_list', arguments: {
                     'filter': 'active',
@@ -199,7 +199,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           Icon(
             Icons.error_outline,
             size: 64,
-            color: AppTheme.dangerColor,
+            color: AppColors.danger,
           ),
           const SizedBox(height: 16),
           Text(
@@ -207,7 +207,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: AppTheme.dangerColor,
+              color: AppColors.danger,
               fontFamily: 'Poppins',
             ),
           ),
@@ -216,7 +216,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             error,
             style: TextStyle(
               fontSize: 14,
-              color: AppTheme.dangerColor,
+              color: AppColors.danger,
               fontFamily: 'Poppins',
             ),
             textAlign: TextAlign.center,
@@ -229,7 +229,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             icon: const Icon(Icons.refresh),
             label: const Text('Retry'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

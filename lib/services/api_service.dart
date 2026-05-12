@@ -19,8 +19,12 @@ class ApiService {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final token = await _storage.read(key: 'access_token');
+          debugPrint('DEBUG: API Request to ${options.path} - Token present: ${token != null}');
           if (token != null) {
+            debugPrint('DEBUG: Attaching token: ${token.substring(0, 10)}...');
             options.headers['Authorization'] = 'Bearer $token';
+          } else {
+            debugPrint('DEBUG: No token found in storage for request to ${options.path}');
           }
           return handler.next(options);
         },
@@ -49,11 +53,14 @@ class ApiService {
   Dio get dio => _dio;
 
   Future<void> saveToken(String token) async {
+    debugPrint('DEBUG: Saving token to storage: ${token.substring(0, 10)}...');
     await _storage.write(key: 'access_token', value: token);
   }
 
   Future<String?> getToken() async {
-    return await _storage.read(key: 'access_token');
+    final token = await _storage.read(key: 'access_token');
+    debugPrint('DEBUG: Reading token from storage: ${token != null ? token.substring(0, 10) + '...' : 'null'}');
+    return token;
   }
 
   Future<void> clearToken() async {

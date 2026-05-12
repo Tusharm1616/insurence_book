@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/api_service.dart';
+import '../services/api_service.dart';
 
 class CustomerDetail {
   final String id;
@@ -64,7 +64,7 @@ class PolicyDetail {
 }
 
 Future<CustomerDetail> _loadCustomerDetail(String customerId) async {
-  final response = await ApiService().get('/api/customers/$customerId');
+  final response = await apiService.dio.get('/api/customers/$customerId');
   final policies = (response.data['policies'] as List)
       .map((policy) => PolicyDetail(
             id: policy['id'] ?? '',

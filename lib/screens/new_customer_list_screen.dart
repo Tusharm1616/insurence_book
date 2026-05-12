@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../core/app_theme.dart';
+import '../core/theme.dart';
 import '../providers/customers_provider.dart';
 import '../widgets/shimmer_widget.dart';
 import 'customer_detail_screen.dart';
@@ -66,7 +66,7 @@ class _NewCustomerListScreenState
     final customersAsync = ref.watch(customersProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.bgColor,
+      backgroundColor: AppThemeHelper.scaffoldBg(context),
       appBar: AppBar(
         title: Text(
           widget.title,
@@ -76,7 +76,7 @@ class _NewCustomerListScreenState
             fontFamily: 'Poppins',
           ),
         ),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -104,7 +104,7 @@ class _NewCustomerListScreenState
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.pushNamed(context, '/create_customer'),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppColors.primary,
         icon: const Icon(Icons.person_add, color: Colors.white),
         label: const Text(
           'Add Customer',
@@ -198,11 +198,11 @@ class _NewCustomerListScreenState
                   CircleAvatar(
                     radius: 24,
                     backgroundColor:
-                        AppTheme.infoColor.withValues(alpha: 0.15),
+                        AppColors.info.withValues(alpha: 0.15),
                     child: Text(
                       initials,
                       style: TextStyle(
-                        color: AppTheme.infoColor,
+                        color: AppColors.info,
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                         fontFamily: 'Poppins',
@@ -269,12 +269,12 @@ class _NewCustomerListScreenState
                   ),
                   _chip(
                     '${customer.totalPolicies} Policies',
-                    AppTheme.infoColor,
+                    AppColors.info,
                   ),
                   if (customer.activePolicies > 0)
                     _chip(
                       '${customer.activePolicies} Active',
-                      AppTheme.primaryColor,
+                      AppColors.primary,
                     ),
                 ],
               ),
@@ -376,7 +376,7 @@ class _NewCustomerListScreenState
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 64, color: AppTheme.dangerColor),
+          Icon(Icons.error_outline, size: 64, color: AppColors.danger),
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -384,7 +384,7 @@ class _NewCustomerListScreenState
               error,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: AppTheme.dangerColor,
+                color: AppColors.danger,
                 fontFamily: 'Poppins',
               ),
             ),

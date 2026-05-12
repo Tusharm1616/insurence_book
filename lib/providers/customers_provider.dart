@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/api_service.dart';
+import '../services/api_service.dart';
 
 class CustomerData {
   final String id;
@@ -63,7 +63,7 @@ class CustomersNotifier extends Notifier<AsyncValue<CustomerListResponse>> {
         if (_searchQuery.isNotEmpty) 'search': _searchQuery,
       };
 
-      final response = await ApiService().get('/api/customers', queryParameters: queryParams);
+      final response = await apiService.dio.get('/api/customers', queryParameters: queryParams);
       final customerListResponse = CustomerListResponse(
         total: response.data['total'] ?? 0,
         page: response.data['page'] ?? 1,

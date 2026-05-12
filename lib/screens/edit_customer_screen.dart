@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../core/app_theme.dart';
-import '../core/api_service.dart';
+import '../core/theme.dart';
+import '../services/api_service.dart';
 import '../providers/customers_provider.dart';
 import '../providers/customer_detail_provider.dart';
 import '../providers/dashboard_provider.dart';
@@ -53,7 +53,7 @@ class _EditCustomerScreenState extends ConsumerState<EditCustomerScreen> {
   Future<void> _loadCustomer() async {
     try {
       final response =
-          await ApiService().get('/api/customers/${widget.customerId}');
+          await apiService.dio.get('/api/customers/${widget.customerId}');
       final d = response.data;
       _nameCtrl.text = d['full_name'] ?? '';
       _phoneCtrl.text = d['phone'] ?? '';
@@ -75,7 +75,7 @@ class _EditCustomerScreenState extends ConsumerState<EditCustomerScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await ApiService().put('/api/customers/${widget.customerId}', data: {
+      await apiService.dio.put('/api/customers/${widget.customerId}', data: {
         'full_name': _nameCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
@@ -142,7 +142,7 @@ class _EditCustomerScreenState extends ConsumerState<EditCustomerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.bgColor,
+      backgroundColor: AppThemeHelper.scaffoldBg(context),
       appBar: AppBar(
         title: const Text(
           'Edit Customer',
@@ -152,7 +152,7 @@ class _EditCustomerScreenState extends ConsumerState<EditCustomerScreen> {
             fontFamily: 'Poppins',
           ),
         ),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -206,7 +206,7 @@ class _EditCustomerScreenState extends ConsumerState<EditCustomerScreen> {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _save,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
+                          backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
@@ -302,7 +302,7 @@ class _EditCustomerScreenState extends ConsumerState<EditCustomerScreen> {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide:
-              BorderSide(color: AppTheme.primaryColor, width: 1.5),
+              BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),
     );

@@ -13,6 +13,11 @@ class AppColors {
   static const Color navActive  = Color(0xFF22C55E);
   static const Color navInactive = Color(0xFF9CA3AF);
 
+  static const Color info    = Color(0xFF3B82F6);
+  static const Color amber   = Color(0xFFF59E0B);
+  static const Color teal    = Color(0xFF14B8A6);
+  static const Color indigo  = Color(0xFF6366F1);
+
   // Light-mode semantic constants (used as fallback)
   static const Color textPrimary   = Color(0xFF0F172A);
   static const Color textSecondary = Color(0xFF475569);
@@ -71,6 +76,14 @@ class AppThemeHelper {
   // Input fill
   static Color inputFill(BuildContext context) =>
       isDark(context) ? const Color(0xFF2C2C2E) : Colors.white;
+
+  // Semantic fallbacks
+  static Color infoColor(BuildContext context) => AppColors.info;
+  static Color warningColor(BuildContext context) => AppColors.warning;
+  static Color dangerColor(BuildContext context) => AppColors.danger;
+  static Color successColor(BuildContext context) => AppColors.success;
+  static Color amberColor(BuildContext context) => AppColors.amber;
+  static Color tealColor(BuildContext context) => AppColors.teal;
 
   // AppBar background (always primary green, consistent across both themes)
   static const Color appBarBg = AppColors.primary;

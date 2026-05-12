@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/app_theme.dart';
-import 'core/theme.dart' hide AppTheme;
+import 'core/theme.dart';
 import 'screens/create_customer_screen.dart';
 import 'screens/auth/splash_screen.dart';
 import 'screens/auth/login_screen.dart';
@@ -12,7 +11,8 @@ import 'screens/new_customer_list_screen.dart';
 import 'screens/customer_detail_screen.dart';
 import 'screens/edit_customer_screen.dart';
 import 'screens/policy_list_screen.dart';
-import 'screens/dashboard_screen.dart';
+
+import 'screens/main_navigation_screen.dart';
 import 'screens/change_password_screen.dart';
 import 'screens/add_policy_type_screen.dart';
 import 'screens/customer_policy_screen.dart';
@@ -67,7 +67,7 @@ class InsureBookApp extends ConsumerWidget {
         '/login':            (context) => const LoginScreen(),
         '/register':         (context) => const RegisterScreen(),
         '/forgot-password':  (context) => const ForgotPasswordScreen(),
-        '/dashboard':        (context) => const DashboardScreen(),
+        '/dashboard':        (context) => const MainNavigationScreen(),
         '/customers':        (context) => const CustomerListScreen(),
         '/customer_detail':   (context) => const CustomerDetailScreen(customerId: ''),
         '/policies':         (context) => const PolicyListScreen(),

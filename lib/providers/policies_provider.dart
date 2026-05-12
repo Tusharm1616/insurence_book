@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/api_service.dart';
+import '../services/api_service.dart';
 
 class PolicyData {
   final String id;
@@ -81,7 +81,7 @@ class PoliciesNotifier extends Notifier<AsyncValue<PolicyListResponse>> {
         if (_searchQuery.isNotEmpty) 'search': _searchQuery,
       };
 
-      final response = await ApiService().get('/api/policies', queryParameters: queryParams);
+      final response = await apiService.dio.get('/api/policies', queryParameters: queryParams);
       final policyListResponse = PolicyListResponse(
         total: response.data['total'] ?? 0,
         page: response.data['page'] ?? 1,

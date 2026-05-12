@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../core/app_theme.dart';
+import '../core/theme.dart';
 import '../providers/policies_provider.dart';
 import '../widgets/shimmer_widget.dart';
 
@@ -39,7 +39,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
     final title = widget.title;
     
     return Scaffold(
-      backgroundColor: AppTheme.bgColor,
+      backgroundColor: AppThemeHelper.scaffoldBg(context),
       appBar: AppBar(
         title: Text(
           title,
@@ -49,7 +49,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
             fontFamily: 'Poppins',
           ),
         ),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -146,7 +146,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
                 Icon(
                   Icons.person,
                   size: 16,
-                  color: AppTheme.infoColor,
+                  color: AppColors.info,
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -161,7 +161,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
                 Icon(
                   Icons.phone,
                   size: 16,
-                  color: AppTheme.infoColor,
+                  color: AppColors.info,
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -319,13 +319,13 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppTheme.warningColor.withValues(alpha: 0.1),
+                color: AppColors.warning.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 emptyIcon,
                 size: 64,
-                color: AppTheme.warningColor,
+                color: AppColors.warning,
               ),
             ),
             const SizedBox(height: 24),
@@ -363,7 +363,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
           Icon(
             Icons.error_outline,
             size: 64,
-            color: AppTheme.dangerColor,
+            color: AppColors.danger,
           ),
           const SizedBox(height: 16),
           Text(
@@ -372,7 +372,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,
-              color: AppTheme.dangerColor,
+              color: AppColors.danger,
               fontFamily: 'Poppins',
             ),
           ),
@@ -384,7 +384,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
             icon: const Icon(Icons.refresh),
             label: const Text('Retry'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryColor,
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

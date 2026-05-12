@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/api_service.dart';
+import '../services/api_service.dart';
 
 class DashboardStats {
   final int allCustomers;
@@ -26,7 +26,7 @@ class DashboardNotifier extends Notifier<AsyncValue<DashboardStats>> {
   Future<void> fetchDashboardStats() async {
     state = const AsyncValue.loading();
     try {
-      final response = await ApiService().get('/api/dashboard/stats');
+      final response = await apiService.dio.get('/api/dashboard/stats');
       final stats = DashboardStats(
         allCustomers: response.data['all_customers'] ?? 0,
         allPolicies: response.data['all_policies'] ?? 0,
