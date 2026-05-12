@@ -187,8 +187,25 @@ async def create_policy(
     if not customer or customer.agent_id != current_user.id:
         raise HTTPException(status_code=404, detail="Customer not found or access denied")
 
+    # Validate required fields
+    if not policy_in.policy_type:
+        raise HTTPException(status_code=400, detail="Policy type is required")
+    
+    if not policy_in.issue_date:
+        raise HTTPException(status_code=400, detail="Issue date is required")
+    
+    if not policy_in.expiry_date:
+        raise HTTPException(status_code=400, detail="Expiry date is required")
+
+    # Validate date logic
+    if policy_in.expiry_date <= policy_in.issue_date:
+        raise HTTPException(status_code=400, detail="Expiry date must be after issue date")
+    
+    if policy_in.maturity_date and policy_in.maturity_date <= policy_in.issue_date:
+        raise HTTPException(status_code=400, detail="Maturity date must be after issue date")
+
     # Determine policy number
-    policy_number = policy_in.policy_number.strip()
+    policy_number = policy_in.policy_number.strip() if policy_in.policy_number else ""
     if _looks_random(policy_number):
         # Auto-generate professional policy number
         policy_number = await _generate_policy_number(
@@ -219,33 +236,41 @@ async def create_policy(
     status_map = {'live': 'active', 'running': 'active', 'activee': 'active'}
     status = status_map.get(raw_status, raw_status)
 
-    new_policy = Policy(
-        customer_id=policy_in.customer_id,
-        agent_id=current_user.id,
-        policy_number=policy_number,
-        policy_type=policy_in.policy_type,
-        status=status,
-        insurer_name=policy_in.insurer_name,
-        plan_name=policy_in.plan_name,
-        premium_amount=policy_in.premium_amount or 0.0,
-        premium_due_date=policy_in.premium_due_date,
-        issue_date=policy_in.issue_date,
-        expiry_date=policy_in.expiry_date,
-        maturity_date=policy_in.maturity_date,
-        sum_assured=policy_in.sum_assured or 0.0,
-        ncb_percent=policy_in.ncb_percent or 0.0,
-        vehicle_reg_no=policy_in.vehicle_reg_no,
-        nominee_name=policy_in.nominee_name,
-        nominee_relation=policy_in.nominee_relation,
-    )
+    try:
+        new_policy = Policy(
+            customer_id=policy_in.customer_id,
+            agent_id=current_user.id,
+            policy_number=policy_number,
+            policy_type=policy_in.policy_type,
+            status=status,
+            insurer_name=policy_in.insurer_name,
+            plan_name=policy_in.plan_name,
+            premium_amount=policy_in.premium_amount or 0.0,
+            premium_due_date=policy_in.premium_due_date,
+            issue_date=policy_in.issue_date,
+            expiry_date=policy_in.expiry_date,
+            maturity_date=policy_in.maturity_date,
+            sum_assured=policy_in.sum_assured or 0.0,
+            ncb_percent=policy_in.ncb_percent or 0.0,
+            vehicle_reg_no=policy_in.vehicle_reg_no,
+            nominee_name=policy_in.nominee_name,
+            nominee_relation=policy_in.nominee_relation,
+        )
 
-    db.add(new_policy)
-    await db.commit()
-    await db.refresh(new_policy)
+        db.add(new_policy)
+        await db.commit()
+        await db.refresh(new_policy)
 
-    # Reload with customer relationship
-    await db.refresh(new_policy, ["customer"])
-    return _policy_to_response(new_policy)
+        # Reload with customer relationship
+        await db.refresh(new_policy, ["customer"])
+        return _policy_to_response(new_policy)
+        
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create policy: {str(e)}"
+        )
 
 
 # ── GET /policies/ ───────────────────────────────────────────────────────────
