@@ -56,7 +56,11 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
-              // TODO: Navigate to edit customer screen
+              Navigator.pushNamed(
+                context,
+                '/edit_customer',
+                arguments: {'customerId': widget.customerId},
+              );
             },
           ),
         ],
@@ -178,7 +182,11 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
             ),
             ElevatedButton.icon(
               onPressed: () {
-                // TODO: Navigate to add policy screen
+                Navigator.pushNamed(
+                  context,
+                  '/add_policy',
+                  arguments: {'customerId': widget.customerId},
+                );
               },
               icon: const Icon(Icons.add, size: 16),
               label: const Text('Add Policy'),

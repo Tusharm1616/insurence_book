@@ -106,7 +106,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    policy.policy_number,
+                    policy.policyNumber,
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -118,13 +118,13 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getPolicyTypeColor(policy.policy_type).withValues(alpha: 0.1),
+                    color: _getPolicyTypeColor(policy.policyType).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    policy.policy_type,
+                    policy.policyType,
                     style: TextStyle(
-                      color: _getPolicyTypeColor(policy.policy_type),
+                      color: _getPolicyTypeColor(policy.policyType),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Poppins',
@@ -146,7 +146,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  policy.customer.full_name,
+                  policy.customer.fullName,
                   style: const TextStyle(
                     fontSize: 13,
                     color: Color(0xFF6B7280),
@@ -175,7 +175,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
             
             // Insurer and plan
             Text(
-              '${policy.insurer_name} — ${policy.plan_name}',
+              '${policy.insurerName} — ${policy.planName}',
               style: const TextStyle(
                 fontSize: 14,
                 color: Color(0xFF6B7280),
@@ -190,7 +190,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Sum Insured: ₹${_formatCurrency(policy.sum_insured)}',
+                    'Sum Insured: ₹${_formatCurrency(policy.sumInsured)}',
                     style: const TextStyle(
                       fontSize: 13,
                       color: Color(0xFF1C1C1C),
@@ -200,7 +200,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
                 ),
                 Expanded(
                   child: Text(
-                    'Premium: ₹${_formatCurrency(policy.premium_amount)}',
+                    'Premium: ₹${_formatCurrency(policy.premiumAmount)}',
                     style: const TextStyle(
                       fontSize: 13,
                       color: Color(0xFF1C1C1C),
@@ -215,7 +215,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
             
             // Period
             Text(
-              'Period: ${_formatDate(policy.start_date)} → ${_formatDate(policy.end_date)}',
+              'Period: ${_formatDate(policy.startDate)} → ${_formatDate(policy.endDate)}',
               style: const TextStyle(
                 fontSize: 13,
                 color: Color(0xFF6B7280),
@@ -251,13 +251,13 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getDaysRemainingColor(policy.days_remaining).withValues(alpha: 0.1),
+                    color: _getDaysRemainingColor(policy.daysRemaining).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    _getDaysRemainingText(policy.days_remaining),
+                    _getDaysRemainingText(policy.daysRemaining),
                     style: TextStyle(
-                      color: _getDaysRemainingColor(policy.days_remaining),
+                      color: _getDaysRemainingColor(policy.daysRemaining),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       fontFamily: 'Poppins',

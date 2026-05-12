@@ -1,45 +1,44 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
 import '../core/api_service.dart';
 
 class PolicyData {
   final String id;
-  final String policy_number;
-  final String policy_type;
-  final String insurer_name;
-  final String plan_name;
-  final double sum_insured;
-  final double premium_amount;
-  final String start_date;
-  final String end_date;
+  final String policyNumber;
+  final String policyType;
+  final String insurerName;
+  final String planName;
+  final double sumInsured;
+  final double premiumAmount;
+  final String startDate;
+  final String endDate;
   final String status;
   final CustomerInfo customer;
-  final int days_remaining;
+  final int daysRemaining;
 
   PolicyData({
     required this.id,
-    required this.policy_number,
-    required this.policy_type,
-    required this.insurer_name,
-    required this.plan_name,
-    required this.sum_insured,
-    required this.premium_amount,
-    required this.start_date,
-    required this.end_date,
+    required this.policyNumber,
+    required this.policyType,
+    required this.insurerName,
+    required this.planName,
+    required this.sumInsured,
+    required this.premiumAmount,
+    required this.startDate,
+    required this.endDate,
     required this.status,
     required this.customer,
-    required this.days_remaining,
+    required this.daysRemaining,
   });
 }
 
 class CustomerInfo {
   final String id;
-  final String full_name;
+  final String fullName;
   final String phone;
 
   CustomerInfo({
     required this.id,
-    required this.full_name,
+    required this.fullName,
     required this.phone,
   });
 }
@@ -58,21 +57,21 @@ class PolicyListResponse {
   });
 }
 
-class PoliciesNotifier extends StateNotifier<AsyncValue<PolicyListResponse>> {
-  PoliciesNotifier(this.ref) : super(const AsyncValue.loading());
-
-  final Ref ref;
+class PoliciesNotifier extends Notifier<AsyncValue<PolicyListResponse>> {
   int _currentPage = 1;
   String _currentFilter = 'all';
   String _searchQuery = '';
   final List<PolicyData> _allPolicies = [];
+
+  @override
+  AsyncValue<PolicyListResponse> build() => const AsyncValue.loading();
 
   Future<void> fetchPolicies({bool refresh = false}) async {
     if (refresh) {
       _currentPage = 1;
       _allPolicies.clear();
     }
-    
+
     state = const AsyncValue.loading();
     try {
       final queryParams = <String, dynamic>{
@@ -81,7 +80,7 @@ class PoliciesNotifier extends StateNotifier<AsyncValue<PolicyListResponse>> {
         'filter': _currentFilter,
         if (_searchQuery.isNotEmpty) 'search': _searchQuery,
       };
-      
+
       final response = await ApiService().get('/api/policies', queryParameters: queryParams);
       final policyListResponse = PolicyListResponse(
         total: response.data['total'] ?? 0,
@@ -89,26 +88,26 @@ class PoliciesNotifier extends StateNotifier<AsyncValue<PolicyListResponse>> {
         pages: response.data['pages'] ?? 1,
         data: (response.data['data'] as List)
             .map((policy) => PolicyData(
-              id: policy['id'] ?? '',
-              policy_number: policy['policy_number'] ?? '',
-              policy_type: policy['policy_type'] ?? '',
-              insurer_name: policy['insurer_name'] ?? '',
-              plan_name: policy['plan_name'] ?? '',
-              sum_insured: (policy['sum_insured'] ?? 0.0).toDouble(),
-              premium_amount: (policy['premium_amount'] ?? 0.0).toDouble(),
-              start_date: policy['start_date'] ?? '',
-              end_date: policy['end_date'] ?? '',
-              status: policy['status'] ?? '',
-              customer: CustomerInfo(
-                id: policy['customer']['id'] ?? '',
-                full_name: policy['customer']['full_name'] ?? '',
-                phone: policy['customer']['phone'] ?? '',
-              ),
-              days_remaining: policy['days_remaining'] ?? 0,
-            ))
+                  id: policy['id'] ?? '',
+                  policyNumber: policy['policy_number'] ?? '',
+                  policyType: policy['policy_type'] ?? '',
+                  insurerName: policy['insurer_name'] ?? '',
+                  planName: policy['plan_name'] ?? '',
+                  sumInsured: (policy['sum_insured'] ?? 0.0).toDouble(),
+                  premiumAmount: (policy['premium_amount'] ?? 0.0).toDouble(),
+                  startDate: policy['start_date'] ?? '',
+                  endDate: policy['end_date'] ?? '',
+                  status: policy['status'] ?? '',
+                  customer: CustomerInfo(
+                    id: policy['customer']['id'] ?? '',
+                    fullName: policy['customer']['full_name'] ?? '',
+                    phone: policy['customer']['phone'] ?? '',
+                  ),
+                  daysRemaining: policy['days_remaining'] ?? 0,
+                ))
             .toList(),
       );
-      
+
       if (refresh) {
         _allPolicies.clear();
         _allPolicies.addAll(policyListResponse.data);
@@ -120,14 +119,14 @@ class PoliciesNotifier extends StateNotifier<AsyncValue<PolicyListResponse>> {
           _allPolicies.addAll(policyListResponse.data);
         }
       }
-      
+
       state = AsyncValue.data(policyListResponse);
-    } catch (e) {
-      state = AsyncValue.error(e.toString());
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
     }
   }
 
-  void loadMorePolicies() async {
+  Future<void> loadMorePolicies() async {
     _currentPage++;
     await fetchPolicies();
   }
@@ -146,11 +145,10 @@ class PoliciesNotifier extends StateNotifier<AsyncValue<PolicyListResponse>> {
     fetchPolicies();
   }
 
-  void refreshPolicies() async {
+  Future<void> refreshPolicies() async {
     await fetchPolicies(refresh: true);
   }
 }
 
-final policiesProvider = StateNotifierProvider<PoliciesNotifier, AsyncValue<PolicyListResponse>>(
-  (ref) => PoliciesNotifier(ref),
-);
+final policiesProvider =
+    NotifierProvider<PoliciesNotifier, AsyncValue<PolicyListResponse>>(PoliciesNotifier.new);
