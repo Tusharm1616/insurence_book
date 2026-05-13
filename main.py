@@ -36,7 +36,59 @@ async def init_db():
                 await conn.run_sync(Base.metadata.create_all)
             
             from sqlalchemy import text
-            
+
+            # ── CRITICAL: Fix customers table column names FIRST ──────────────
+            # The live DB may have mobile_number/date_of_birth from old schema.
+            # Run this in its own transaction so failures don't block startup.
+            critical_fix = """
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='mobile_number'
+                    ) AND NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='phone'
+                    ) THEN
+                        ALTER TABLE customers RENAME COLUMN mobile_number TO phone;
+                        RAISE NOTICE 'Renamed mobile_number -> phone';
+                    END IF;
+
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='phone'
+                    ) THEN
+                        ALTER TABLE customers ADD COLUMN phone VARCHAR(15);
+                        RAISE NOTICE 'Added phone column';
+                    END IF;
+
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='date_of_birth'
+                    ) AND NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='dob'
+                    ) THEN
+                        ALTER TABLE customers RENAME COLUMN date_of_birth TO dob;
+                        RAISE NOTICE 'Renamed date_of_birth -> dob';
+                    END IF;
+
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='dob'
+                    ) THEN
+                        ALTER TABLE customers ADD COLUMN dob DATE;
+                        RAISE NOTICE 'Added dob column';
+                    END IF;
+                END $$;
+            """
+            try:
+                async with engine.begin() as conn:
+                    await conn.execute(text(critical_fix))
+                print("DEBUG: Critical customers column fix applied successfully.")
+            except Exception as fix_err:
+                print(f"DEBUG: Critical fix error (may be harmless): {fix_err}")
+
             # Safely run migrations
             migrations = [
                 # ── customers table: rename legacy columns to match current model ──

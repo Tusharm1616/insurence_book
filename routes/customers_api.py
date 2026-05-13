@@ -208,12 +208,59 @@ async def create_customer(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Create a new customer.
+    Create a new customer. Handles legacy column names automatically.
     """
-    
+    from sqlalchemy import text as sa_text
+
     try:
         agent_id = current_user.id
-        
+
+        # ── Auto-fix: ensure 'phone' column exists (rename from mobile_number if needed) ──
+        try:
+            await db.execute(sa_text("""
+                DO $$
+                BEGIN
+                    -- Rename mobile_number -> phone if needed
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='mobile_number'
+                    ) AND NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='phone'
+                    ) THEN
+                        ALTER TABLE customers RENAME COLUMN mobile_number TO phone;
+                    END IF;
+                    -- Add phone if still missing
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='phone'
+                    ) THEN
+                        ALTER TABLE customers ADD COLUMN phone VARCHAR(15);
+                    END IF;
+                    -- Rename date_of_birth -> dob if needed
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='date_of_birth'
+                    ) AND NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='dob'
+                    ) THEN
+                        ALTER TABLE customers RENAME COLUMN date_of_birth TO dob;
+                    END IF;
+                    -- Add dob if still missing
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='dob'
+                    ) THEN
+                        ALTER TABLE customers ADD COLUMN dob DATE;
+                    END IF;
+                END $$;
+            """))
+            await db.commit()
+        except Exception as fix_err:
+            await db.rollback()
+            print(f"[auto-fix] column fix attempt: {fix_err}")
+
         new_customer = Customer(
             agent_id=agent_id,
             full_name=customer_data.get("full_name"),
@@ -226,11 +273,11 @@ async def create_customer(
             pincode=customer_data.get("pincode"),
             status=customer_data.get("status", "active")
         )
-        
+
         db.add(new_customer)
         await db.commit()
         await db.refresh(new_customer)
-        
+
         return {
             "id": str(new_customer.id),
             "full_name": new_customer.full_name,
@@ -240,7 +287,7 @@ async def create_customer(
             "status": new_customer.status,
             "created_at": new_customer.created_at.isoformat() if new_customer.created_at else None
         }
-        
+
     except Exception as e:
         await db.rollback()
         raise HTTPException(
