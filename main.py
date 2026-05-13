@@ -39,6 +39,49 @@ async def init_db():
             
             # Safely run migrations
             migrations = [
+                # ── customers table: rename legacy columns to match current model ──
+                # Rename mobile_number -> phone (safe: only runs if mobile_number exists)
+                """
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='mobile_number'
+                    ) AND NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='phone'
+                    ) THEN
+                        ALTER TABLE customers RENAME COLUMN mobile_number TO phone;
+                    END IF;
+                END $$;
+                """,
+                # Add phone column if it still doesn't exist after the rename attempt
+                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS phone VARCHAR(15);",
+                # Rename date_of_birth -> dob (safe: only runs if date_of_birth exists)
+                """
+                DO $$
+                BEGIN
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='date_of_birth'
+                    ) AND NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='customers' AND column_name='dob'
+                    ) THEN
+                        ALTER TABLE customers RENAME COLUMN date_of_birth TO dob;
+                    END IF;
+                END $$;
+                """,
+                # Add dob column if it still doesn't exist
+                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS dob DATE;",
+                # Add other missing customer columns
+                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS city VARCHAR(80);",
+                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS state VARCHAR(80);",
+                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS pincode VARCHAR(10);",
+                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS address TEXT;",
+                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS email VARCHAR(100);",
+                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS full_name VARCHAR(150);",
+                # ── end customers fixes ──
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR, ADD COLUMN IF NOT EXISTS license_no VARCHAR;",
                 "ALTER TABLE policies ADD COLUMN IF NOT EXISTS agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE;",
                 "ALTER TABLE policies RENAME COLUMN insurance_type TO policy_type;",
@@ -46,7 +89,6 @@ async def init_db():
                 "ALTER TABLE policies RENAME COLUMN renewal_date TO premium_due_date;",
                 "ALTER TABLE policies ADD COLUMN IF NOT EXISTS ncb_percent FLOAT DEFAULT 0.0;",
                 "ALTER TABLE policies ADD COLUMN IF NOT EXISTS vehicle_reg_no VARCHAR(20);",
-                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS date_of_birth DATE;",
                 "ALTER TABLE customers ADD COLUMN IF NOT EXISTS anniversary_date DATE;",
                 "ALTER TABLE customers ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active';",
                 "ALTER TABLE policies ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active';",
