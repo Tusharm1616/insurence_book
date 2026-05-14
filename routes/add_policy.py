@@ -42,7 +42,7 @@ async def get_agent_customers(
             "id": customer.id,
             "name": customer.full_name,
             "email": customer.email,
-            "phone": customer.mobile_number,
+            "phone": customer.phone,
             "address": customer.address,
             "state": customer.state,
             "city": customer.city
@@ -106,6 +106,8 @@ async def add_policy(
         premium_due_date=policy_request.policy_details.premium_due_date,
         issue_date=policy_request.policy_details.issue_date,
         expiry_date=policy_request.policy_details.expiry_date,
+        start_date=policy_request.policy_details.issue_date,
+        end_date=policy_request.policy_details.expiry_date,
         maturity_date=policy_request.policy_details.maturity_date,
         sum_assured=policy_request.policy_details.sum_assured,
         ncb_percent=get_ncb_percent(policy_request),
@@ -214,7 +216,7 @@ async def get_recent_policies(
     result = await db.execute(
         select(Policy)
         .where(Policy.agent_id == current_user.id)
-        .order_by(Policy.issue_date.desc())
+        .order_by(Policy.id.desc())
         .limit(limit)
     )
     policies = result.scalars().all()
@@ -224,10 +226,9 @@ async def get_recent_policies(
             "id": policy.id,
             "policy_number": policy.policy_number,
             "policy_type": policy.policy_type,
-            "customer_name": policy.customer.full_name if policy.customer else "Unknown",
-            "premium_amount": policy.premium_amount,
-            "issue_date": policy.issue_date,
-            "expiry_date": policy.expiry_date,
+            "premium_amount": float(policy.premium_amount) if policy.premium_amount else 0.0,
+            "issue_date": policy.issue_date.isoformat() if policy.issue_date else None,
+            "expiry_date": policy.expiry_date.isoformat() if policy.expiry_date else None,
             "status": policy.status
         }
         for policy in policies

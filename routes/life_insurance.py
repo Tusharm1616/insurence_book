@@ -127,12 +127,12 @@ async def get_life_policies(
             policy_number=policy.policy_number,
             insurer_name=policy.insurer_name,
             status=policy.status,
-            premium_amount=policy.premium_amount,
+            premium_amount=float(policy.premium_amount) if policy.premium_amount else None,
             premium_due_date=policy.premium_due_date,
             maturity_date=policy.maturity_date,
-            sum_assured=policy.sum_assured,
+            sum_assured=float(policy.sum_assured) if policy.sum_assured else None,
             customer_full_name=customer.full_name,
-            customer_phone_number=customer.mobile_number
+            customer_phone_number=customer.phone or ""
         ))
         
     return LifePolicyListResponse(

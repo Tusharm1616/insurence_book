@@ -135,6 +135,72 @@ async def init_db():
                 "ALTER TABLE customers ADD COLUMN IF NOT EXISTS full_name VARCHAR(150);",
                 # ── end customers fixes ──
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR, ADD COLUMN IF NOT EXISTS license_no VARCHAR;",
+                # ── policies table: fix column name mismatches ────────────────────
+                """
+                DO $$
+                BEGIN
+                    -- Rename sum_insured -> sum_assured if needed
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='policies' AND column_name='sum_insured'
+                    ) AND NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='policies' AND column_name='sum_assured'
+                    ) THEN
+                        ALTER TABLE policies RENAME COLUMN sum_insured TO sum_assured;
+                    END IF;
+                    -- Add sum_assured if missing
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='policies' AND column_name='sum_assured'
+                    ) THEN
+                        ALTER TABLE policies ADD COLUMN sum_assured NUMERIC(14,2);
+                    END IF;
+                    -- Add issue_date if missing
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='policies' AND column_name='issue_date'
+                    ) THEN
+                        ALTER TABLE policies ADD COLUMN issue_date DATE DEFAULT CURRENT_DATE;
+                    END IF;
+                    -- Add expiry_date if missing
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='policies' AND column_name='expiry_date'
+                    ) THEN
+                        ALTER TABLE policies ADD COLUMN expiry_date DATE DEFAULT CURRENT_DATE + INTERVAL '1 year';
+                    END IF;
+                    -- Add premium_due_date if missing
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='policies' AND column_name='premium_due_date'
+                    ) THEN
+                        ALTER TABLE policies ADD COLUMN premium_due_date DATE;
+                    END IF;
+                    -- Add maturity_date if missing
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='policies' AND column_name='maturity_date'
+                    ) THEN
+                        ALTER TABLE policies ADD COLUMN maturity_date DATE;
+                    END IF;
+                    -- Add ncb_percent if missing
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='policies' AND column_name='ncb_percent'
+                    ) THEN
+                        ALTER TABLE policies ADD COLUMN ncb_percent FLOAT DEFAULT 0.0;
+                    END IF;
+                    -- Add vehicle_reg_no if missing
+                    IF NOT EXISTS (
+                        SELECT 1 FROM information_schema.columns
+                        WHERE table_name='policies' AND column_name='vehicle_reg_no'
+                    ) THEN
+                        ALTER TABLE policies ADD COLUMN vehicle_reg_no VARCHAR(20);
+                    END IF;
+                END $$;
+                """,
+                # ── end policies fixes ──
                 "ALTER TABLE policies ADD COLUMN IF NOT EXISTS agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE;",
                 "ALTER TABLE policies RENAME COLUMN insurance_type TO policy_type;",
                 "ALTER TABLE policies ADD COLUMN IF NOT EXISTS maturity_date DATE;",
