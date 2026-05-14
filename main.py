@@ -508,22 +508,37 @@ from datetime import datetime
 @app.get("/")
 @limiter.limit("100/minute")
 def read_root(request):
-    return {"message": "Welcome to InsureBook API", "version": "2.2.0", "docs": "/docs", "health": "/health"}
+    return {"message": "Welcome to InsureBook API", "version": "2.3.0", "docs": "/docs", "health": "/health"}
 
 
 @app.get("/health")
 @limiter.limit("200/minute")
-def health_check(request):
-    return {"status": "healthy", "service": "InsureBook API", "version": "2.2.0", "timestamp": datetime.utcnow().isoformat() + "Z"}
+async def health_check(request):
+    """Enhanced health check — also verifies DB connectivity."""
+    from sqlalchemy import text as _t
+    db_ok = False
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(_t("SELECT 1"))
+        db_ok = True
+    except Exception:
+        db_ok = False
+    return {
+        "status": "healthy" if db_ok else "degraded",
+        "service": "InsureBook API",
+        "version": "2.3.0",
+        "db": "ok" if db_ok else "error",
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+    }
 
 
 @app.get("/api/version")
 @limiter.limit("100/minute")
 def get_version(request):
     return {
-        "api_version": "2.2.0",
+        "api_version": "2.3.0",
         "min_app_version": "1.0.0",
-        "build": "2026.05.15",
+        "build": "2026.05.15.v3",
         "features": {
             "motor_calculator": True,
             "life_insurance_reports": True,
