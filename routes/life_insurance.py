@@ -108,15 +108,15 @@ async def get_life_policies(
     else:
         base_conditions.append(func.lower(Policy.status) == filter)
 
-    # Query data
-    query = select(Policy, Customer).join(Customer, Policy.customer_id == Customer.id).where(*base_conditions)
+    # Query data — LEFT JOIN so policies without customer still show
+    query = select(Policy, Customer).outerjoin(Customer, Policy.customer_id == Customer.id).where(*base_conditions)
     
     # Count total
-    count_query = select(func.count(Policy.id)).join(Customer, Policy.customer_id == Customer.id).where(*base_conditions)
+    count_query = select(func.count(Policy.id)).where(*base_conditions)
     count_result = await db.execute(count_query)
     total = count_result.scalar() or 0
     
-    # Get paginated data (order by created_at desc is requested, but we don't have created_at. We'll use id desc)
+    # Get paginated data
     query = query.order_by(Policy.id.desc()).offset(offset).limit(limit)
     result = await db.execute(query)
     
@@ -124,15 +124,15 @@ async def get_life_policies(
     for policy, customer in result.all():
         items.append(LifePolicyItem(
             policy_id=policy.id,
-            policy_number=policy.policy_number,
+            policy_number=policy.policy_number or "",
             insurer_name=policy.insurer_name,
-            status=policy.status,
+            status=policy.status or "",
             premium_amount=float(policy.premium_amount) if policy.premium_amount else None,
             premium_due_date=policy.premium_due_date,
             maturity_date=policy.maturity_date,
             sum_assured=float(policy.sum_assured) if policy.sum_assured else None,
-            customer_full_name=customer.full_name,
-            customer_phone_number=customer.phone or ""
+            customer_full_name=customer.full_name if customer else "Unknown",
+            customer_phone_number=customer.phone if customer else ""
         ))
         
     return LifePolicyListResponse(

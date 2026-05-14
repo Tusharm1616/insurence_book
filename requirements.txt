@@ -14,4 +14,4 @@ pydantic-settings
 httpx
 slowapi==0.1.9
 redis==5.0.4
-# v2 - force rebuild 2026-05-15
+# v3 - force rebuild 2026-05-15 comprehensive fix
