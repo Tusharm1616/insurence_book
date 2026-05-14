@@ -33,10 +33,10 @@ async def get_policies(
         agent_id = current_user.id
         offset = (page - 1) * limit
         
-        # Build base query
-        query = select(Policy, Customer).join(Customer, Policy.customer_id == Customer.id).where(
-            Policy.agent_id == agent_id
-        )
+        # Build base query — use LEFT JOIN so policies without a customer still show
+        query = select(Policy, Customer).outerjoin(
+            Customer, Policy.customer_id == Customer.id
+        ).where(Policy.agent_id == agent_id)
         
         # Apply filter logic according to specification
         if filter == 'expired':
@@ -71,15 +71,13 @@ async def get_policies(
         if customer_id:
             query = query.where(Policy.customer_id == int(customer_id))
         
-        # Apply search filter
         if search:
             search_term = f"%{search}%"
             query = query.where(
                 Policy.policy_number.ilike(search_term) |
                 Policy.policy_type.ilike(search_term) |
                 Policy.insurer_name.ilike(search_term) |
-                Customer.full_name.ilike(search_term) |
-                Customer.phone.ilike(search_term)
+                Customer.full_name.ilike(search_term)
             )
         
         # Get total count
@@ -121,39 +119,37 @@ async def get_policies(
             count_query = count_query.where(
                 Policy.policy_number.ilike(search_term) |
                 Policy.policy_type.ilike(search_term) |
-                Policy.insurer_name.ilike(search_term) |
-                Customer.full_name.ilike(search_term) |
-                Customer.phone.ilike(search_term)
+                Policy.insurer_name.ilike(search_term)
             )
         
         count_result = await db.execute(count_query)
         total = count_result.scalar() or 0
         
-        # Get paginated data
-        query = query.order_by(Policy.created_at.desc()).offset(offset).limit(limit)
+        # Get paginated data — order by id desc (created_at may not exist yet)
+        query = query.order_by(Policy.id.desc()).offset(offset).limit(limit)
         result = await db.execute(query)
         
         data = []
         for policy, customer in result.all():
-            # Calculate days_remaining in Python using date.today()
             today = date.today()
             days_remaining = (policy.end_date - today).days if policy.end_date else 0
             
             policy_data = {
                 "id": str(policy.id),
-                "policy_number": policy.policy_number,
-                "policy_type": policy.policy_type,
+                "policy_number": policy.policy_number or "",
+                "policy_type": policy.policy_type or "",
                 "insurer_name": policy.insurer_name,
                 "plan_name": policy.plan_name,
                 "sum_assured": float(policy.sum_assured) if policy.sum_assured else 0.0,
                 "premium_amount": float(policy.premium_amount) if policy.premium_amount else 0.0,
                 "start_date": policy.start_date.isoformat() if policy.start_date else None,
                 "end_date": policy.end_date.isoformat() if policy.end_date else None,
-                "status": policy.status,
+                "status": policy.status or "active",
+                # customer may be None if policy has no customer_id (LEFT JOIN)
                 "customer": {
-                    "id": str(customer.id),
-                    "full_name": customer.full_name,
-                    "phone": customer.phone
+                    "id": str(customer.id) if customer else "",
+                    "full_name": customer.full_name if customer else "Unknown",
+                    "phone": customer.phone if customer else ""
                 },
                 "days_remaining": days_remaining
             }

@@ -172,7 +172,7 @@ async def get_expiring_list(
             expiry_date=policy.expiry_date,
             days_remaining=days_remaining,
             customer_full_name=customer.full_name,
-            customer_phone_number=customer.mobile_number
+            customer_phone_number=customer.phone
         ))
         
     return ExpiringListResponse(
@@ -239,7 +239,7 @@ async def get_expired_list(
             expiry_date=policy.expiry_date,
             days_overdue=days_overdue,
             customer_full_name=customer.full_name,
-            customer_phone_number=customer.mobile_number
+            customer_phone_number=customer.phone
         ))
 
     return ExpiredListResponse(
