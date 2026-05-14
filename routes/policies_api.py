@@ -188,11 +188,21 @@ async def create_policy(
     """
     Create a new policy.
     """
-    
+    from datetime import date as _date
+
+    def _parse_date(val):
+        if val is None:
+            return None
+        if isinstance(val, _date):
+            return val
+        try:
+            return _date.fromisoformat(str(val)[:10])
+        except (ValueError, TypeError):
+            return None
+
     try:
         agent_id = current_user.id
-        
-        # Verify customer exists and belongs to agent
+
         customer_id = policy_data.get("customer_id")
         if customer_id:
             customer_query = select(Customer).where(
@@ -201,13 +211,9 @@ async def create_policy(
             )
             customer_result = await db.execute(customer_query)
             customer = customer_result.scalars().first()
-            
             if not customer:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Customer not found or access denied"
-                )
-        
+                raise HTTPException(status_code=404, detail="Customer not found or access denied")
+
         new_policy = Policy(
             agent_id=agent_id,
             customer_id=int(customer_id) if customer_id else None,
@@ -218,10 +224,10 @@ async def create_policy(
             sum_assured=policy_data.get("sum_assured") or policy_data.get("sum_insured"),
             premium_amount=policy_data.get("premium_amount"),
             payment_mode=policy_data.get("payment_mode"),
-            start_date=policy_data.get("start_date"),
-            end_date=policy_data.get("end_date"),
-            issue_date=policy_data.get("issue_date") or policy_data.get("start_date"),
-            expiry_date=policy_data.get("expiry_date") or policy_data.get("end_date"),
+            start_date=_parse_date(policy_data.get("start_date")),
+            end_date=_parse_date(policy_data.get("end_date")),
+            issue_date=_parse_date(policy_data.get("issue_date") or policy_data.get("start_date")),
+            expiry_date=_parse_date(policy_data.get("expiry_date") or policy_data.get("end_date")),
             status=policy_data.get("status", "active"),
             nominee_name=policy_data.get("nominee_name"),
             nominee_relation=policy_data.get("nominee_relation"),

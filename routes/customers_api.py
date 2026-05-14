@@ -208,65 +208,30 @@ async def create_customer(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Create a new customer. Handles legacy column names automatically.
+    Create a new customer.
     """
-    from sqlalchemy import text as sa_text
+    from datetime import date as _date
+
+    def _parse_date(val) -> _date | None:
+        """Convert string 'YYYY-MM-DD' or datetime.date to date, or return None."""
+        if val is None:
+            return None
+        if isinstance(val, _date):
+            return val
+        try:
+            return _date.fromisoformat(str(val)[:10])
+        except (ValueError, TypeError):
+            return None
 
     try:
         agent_id = current_user.id
-
-        # ── Auto-fix: ensure 'phone' column exists (rename from mobile_number if needed) ──
-        try:
-            await db.execute(sa_text("""
-                DO $$
-                BEGIN
-                    -- Rename mobile_number -> phone if needed
-                    IF EXISTS (
-                        SELECT 1 FROM information_schema.columns
-                        WHERE table_name='customers' AND column_name='mobile_number'
-                    ) AND NOT EXISTS (
-                        SELECT 1 FROM information_schema.columns
-                        WHERE table_name='customers' AND column_name='phone'
-                    ) THEN
-                        ALTER TABLE customers RENAME COLUMN mobile_number TO phone;
-                    END IF;
-                    -- Add phone if still missing
-                    IF NOT EXISTS (
-                        SELECT 1 FROM information_schema.columns
-                        WHERE table_name='customers' AND column_name='phone'
-                    ) THEN
-                        ALTER TABLE customers ADD COLUMN phone VARCHAR(15);
-                    END IF;
-                    -- Rename date_of_birth -> dob if needed
-                    IF EXISTS (
-                        SELECT 1 FROM information_schema.columns
-                        WHERE table_name='customers' AND column_name='date_of_birth'
-                    ) AND NOT EXISTS (
-                        SELECT 1 FROM information_schema.columns
-                        WHERE table_name='customers' AND column_name='dob'
-                    ) THEN
-                        ALTER TABLE customers RENAME COLUMN date_of_birth TO dob;
-                    END IF;
-                    -- Add dob if still missing
-                    IF NOT EXISTS (
-                        SELECT 1 FROM information_schema.columns
-                        WHERE table_name='customers' AND column_name='dob'
-                    ) THEN
-                        ALTER TABLE customers ADD COLUMN dob DATE;
-                    END IF;
-                END $$;
-            """))
-            await db.commit()
-        except Exception as fix_err:
-            await db.rollback()
-            print(f"[auto-fix] column fix attempt: {fix_err}")
 
         new_customer = Customer(
             agent_id=agent_id,
             full_name=customer_data.get("full_name"),
             phone=customer_data.get("phone"),
             email=customer_data.get("email"),
-            dob=customer_data.get("dob"),
+            dob=_parse_date(customer_data.get("dob")),
             address=customer_data.get("address"),
             city=customer_data.get("city"),
             state=customer_data.get("state"),
@@ -295,6 +260,23 @@ async def create_customer(
             detail=f"Failed to create customer: {str(e)}"
         )
 
+        return {
+            "id": str(new_customer.id),
+            "full_name": new_customer.full_name,
+            "phone": new_customer.phone,
+            "email": new_customer.email,
+            "city": new_customer.city,
+            "status": new_customer.status,
+            "created_at": new_customer.created_at.isoformat() if new_customer.created_at else None
+        }
+
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create customer: {str(e)}"
+        )
+
 @router.put("/{customer_id}")
 async def update_customer(
     customer_id: str,
@@ -305,29 +287,39 @@ async def update_customer(
     """
     Update an existing customer.
     """
-    
+    from datetime import date as _date
+
+    def _parse_date(val):
+        if val is None:
+            return None
+        if isinstance(val, _date):
+            return val
+        try:
+            return _date.fromisoformat(str(val)[:10])
+        except (ValueError, TypeError):
+            return None
+
+    DATE_FIELDS = {"dob", "anniversary_date"}
+
     try:
         agent_id = current_user.id
-        
-        # Get existing customer
+
         customer_query = select(Customer).where(
             Customer.id == int(customer_id),
             Customer.agent_id == agent_id
         )
         customer_result = await db.execute(customer_query)
         customer = customer_result.scalars().first()
-        
+
         if not customer:
-            raise HTTPException(
-                status_code=404,
-                detail="Customer not found"
-            )
-        
-        # Update customer fields
+            raise HTTPException(status_code=404, detail="Customer not found")
+
         for field, value in customer_data.items():
             if hasattr(customer, field) and value is not None:
+                if field in DATE_FIELDS:
+                    value = _parse_date(value)
                 setattr(customer, field, value)
-        
+
         await db.commit()
         await db.refresh(customer)
         
