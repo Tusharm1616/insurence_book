@@ -51,25 +51,33 @@ async def get_birthdays(
     current_user: User = Depends(get_current_user)
 ):
     try:
+        # Use raw SQL to avoid SQLAlchemy column-not-found errors
+        from sqlalchemy import text
         result = await db.execute(
-            select(Customer).where(
-                Customer.agent_id == current_user.id,
-                Customer.dob.isnot(None)
-            )
+            text("""
+                SELECT id, full_name, phone, dob
+                FROM customers
+                WHERE agent_id = :agent_id
+                  AND dob IS NOT NULL
+            """),
+            {"agent_id": current_user.id}
         )
-        customers = result.scalars().all()
+        rows = result.fetchall()
         
         current_date = date.today()
         reminders = []
         
-        for c in customers:
+        for row in rows:
             try:
-                days, turning_age = get_days_until_next_anniversary(c.dob, current_date)
+                cid, full_name, phone, dob = row
+                if dob is None:
+                    continue
+                days, turning_age = get_days_until_next_anniversary(dob, current_date)
                 reminders.append(ReminderItem(
-                    customer_id=c.id,
-                    full_name=c.full_name or "Unknown",
-                    phone=c.phone or "",
-                    event_date=c.dob,
+                    customer_id=cid,
+                    full_name=full_name or "Unknown",
+                    phone=phone or "",
+                    event_date=dob,
                     days_remaining=days,
                     turning_age=turning_age,
                     is_today=days == 0
@@ -88,25 +96,47 @@ async def get_anniversaries(
     current_user: User = Depends(get_current_user)
 ):
     try:
-        result = await db.execute(
-            select(Customer).where(
-                Customer.agent_id == current_user.id,
-                Customer.anniversary_date.isnot(None)
-            )
+        from sqlalchemy import text
+        # Check if anniversary_date column exists first
+        col_check = await db.execute(
+            text("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name='customers' AND column_name='anniversary_date'
+            """)
         )
-        customers = result.scalars().all()
+        if not col_check.fetchone():
+            # Column doesn't exist yet — add it and return empty
+            await db.execute(text(
+                "ALTER TABLE customers ADD COLUMN IF NOT EXISTS anniversary_date DATE"
+            ))
+            await db.commit()
+            return []
+
+        result = await db.execute(
+            text("""
+                SELECT id, full_name, phone, anniversary_date
+                FROM customers
+                WHERE agent_id = :agent_id
+                  AND anniversary_date IS NOT NULL
+            """),
+            {"agent_id": current_user.id}
+        )
+        rows = result.fetchall()
         
         current_date = date.today()
         reminders = []
         
-        for c in customers:
+        for row in rows:
             try:
-                days, turning_years = get_days_until_next_anniversary(c.anniversary_date, current_date)
+                cid, full_name, phone, ann_date = row
+                if ann_date is None:
+                    continue
+                days, turning_years = get_days_until_next_anniversary(ann_date, current_date)
                 reminders.append(ReminderItem(
-                    customer_id=c.id,
-                    full_name=c.full_name or "Unknown",
-                    phone=c.phone or "",
-                    event_date=c.anniversary_date,
+                    customer_id=cid,
+                    full_name=full_name or "Unknown",
+                    phone=phone or "",
+                    event_date=ann_date,
                     days_remaining=days,
                     turning_age=turning_years,
                     is_today=days == 0
