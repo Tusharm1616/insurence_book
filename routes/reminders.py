@@ -60,19 +60,21 @@ async def get_birthdays(
     reminders = []
     
     for c in customers:
-        days, turning_age = get_days_until_next_anniversary(c.dob, current_date)
-        if days <= 30:
+        try:
+            days, turning_age = get_days_until_next_anniversary(c.dob, current_date)
+            # Show ALL upcoming birthdays (not just 30 days)
             reminders.append(ReminderItem(
                 customer_id=c.id,
-                full_name=c.full_name,
-                phone=c.mobile_number,
+                full_name=c.full_name or "Unknown",
+                phone=c.phone or "",
                 event_date=c.dob,
                 days_remaining=days,
                 turning_age=turning_age,
                 is_today=days == 0
             ))
+        except Exception:
+            continue
             
-    # Sort by days remaining
     reminders.sort(key=lambda x: x.days_remaining)
     return reminders
 
@@ -82,7 +84,10 @@ async def get_anniversaries(
     current_user: User = Depends(get_current_user)
 ):
     result = await db.execute(
-        select(Customer).where(Customer.agent_id == current_user.id, Customer.anniversary_date.isnot(None))
+        select(Customer).where(
+            Customer.agent_id == current_user.id,
+            Customer.anniversary_date.isnot(None)
+        )
     )
     customers = result.scalars().all()
     
@@ -90,19 +95,21 @@ async def get_anniversaries(
     reminders = []
     
     for c in customers:
-        days, turning_years = get_days_until_next_anniversary(c.anniversary_date, current_date)
-        if days <= 30:
+        try:
+            days, turning_years = get_days_until_next_anniversary(c.anniversary_date, current_date)
+            # Show ALL upcoming anniversaries (not just 30 days)
             reminders.append(ReminderItem(
                 customer_id=c.id,
-                full_name=c.full_name,
-                phone=c.mobile_number,
+                full_name=c.full_name or "Unknown",
+                phone=c.phone or "",
                 event_date=c.anniversary_date,
                 days_remaining=days,
                 turning_age=turning_years,
                 is_today=days == 0
             ))
+        except Exception:
+            continue
             
-    # Sort by days remaining
     reminders.sort(key=lambda x: x.days_remaining)
     return reminders
 
@@ -236,7 +243,7 @@ async def get_reminders_dashboard(
         card = ReminderCard(
             id=customer.id,
             person_name=customer.full_name,
-            phone_number=customer.mobile_number,
+            phone_number=customer.phone,
             reminder_date=reminder_date,
             reminder_type=ReminderType.BIRTHDAY,
             title="Birthday",
@@ -263,7 +270,7 @@ async def get_reminders_dashboard(
             card = ReminderCard(
                 id=customer.id,
                 person_name=customer.full_name,
-                phone_number=customer.mobile_number,
+                phone_number=customer.phone,
                 reminder_date=reminder_date,
                 reminder_type=ReminderType.ANNIVERSARY,
                 title="Anniversary",
