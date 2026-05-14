@@ -248,7 +248,6 @@ async def create_policy(
             plan_name=policy_data.get("plan_name") or policy_type,
             sum_assured=policy_data.get("sum_assured") or policy_data.get("sum_insured") or 0,
             premium_amount=policy_data.get("premium_amount") or 0,
-            payment_mode=policy_data.get("payment_mode"),
             start_date=_parse_date(policy_data.get("start_date")),
             end_date=_parse_date(policy_data.get("end_date")),
             issue_date=_parse_date(

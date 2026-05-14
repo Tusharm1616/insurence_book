@@ -17,10 +17,8 @@ class Policy(Base):
     plan_name = Column(String(120))
 
     # ── Financial columns — use DB names exactly ──────────────────────────
-    # The live DB has sum_assured (NOT sum_insured)
     sum_assured = Column(NUMERIC(14, 2))
     premium_amount = Column(NUMERIC(12, 2))
-    payment_mode = Column(String(20))
 
     # ── Date columns ──────────────────────────────────────────────────────
     # The live DB has issue_date / expiry_date / premium_due_date / maturity_date
