@@ -174,6 +174,10 @@ async def init_db():
                     "ALTER TABLE policies ADD COLUMN IF NOT EXISTS plan_name VARCHAR(120)"),
                 ("policies add insurer_name",
                     "ALTER TABLE policies ADD COLUMN IF NOT EXISTS insurer_name VARCHAR(120)"),
+                ("policies add created_at",
+                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS created_at DATE DEFAULT CURRENT_DATE"),
+                ("policies add updated_at",
+                    "ALTER TABLE policies ADD COLUMN IF NOT EXISTS updated_at DATE DEFAULT CURRENT_DATE"),
                 # NOTE: PostgreSQL requires SET NOT NULL and SET DEFAULT as separate statements
                 ("policies policy_number not null",
                     "ALTER TABLE policies ALTER COLUMN policy_number SET NOT NULL"),
