@@ -74,33 +74,67 @@ async def get_customers(
         query = query.order_by(Customer.id.desc()).offset(offset).limit(limit)
         customers = (await db.execute(query)).scalars().all()
 
+        # Get all customer IDs for batch policy queries
+        customer_ids = [c.id for c in customers]
+
+        # Batch fetch policy counts in one query each (much faster than N+1)
+        total_pol_map: dict = {}
+        active_pol_map: dict = {}
+        latest_end_map: dict = {}
+
+        if customer_ids:
+            # Total policies per customer
+            total_pol_result = await db.execute(
+                select(Policy.customer_id, func.count(Policy.id))
+                .where(Policy.customer_id.in_(customer_ids))
+                .group_by(Policy.customer_id)
+            )
+            for cid, cnt in total_pol_result.all():
+                total_pol_map[cid] = cnt
+
+            # Active policies per customer
+            active_pol_result = await db.execute(
+                select(Policy.customer_id, func.count(Policy.id))
+                .where(
+                    Policy.customer_id.in_(customer_ids),
+                    Policy.status.in_(['active', 'live'])
+                )
+                .group_by(Policy.customer_id)
+            )
+            for cid, cnt in active_pol_result.all():
+                active_pol_map[cid] = cnt
+
+            # Latest policy end date per customer (use COALESCE for end_date/expiry_date)
+            from sqlalchemy import case
+            latest_result = await db.execute(
+                select(
+                    Policy.customer_id,
+                    func.max(
+                        case(
+                            (Policy.end_date.isnot(None), Policy.end_date),
+                            else_=Policy.expiry_date
+                        )
+                    ).label("latest_end")
+                )
+                .where(Policy.customer_id.in_(customer_ids))
+                .group_by(Policy.customer_id)
+            )
+            for cid, latest_end in latest_result.all():
+                latest_end_map[cid] = latest_end
+
         data = []
         for c in customers:
-            latest = (await db.execute(
-                select(Policy).where(Policy.customer_id == c.id)
-                .order_by(Policy.end_date.desc()).limit(1)
-            )).scalars().first()
-
-            total_pol = (await db.execute(
-                select(func.count(Policy.id)).where(Policy.customer_id == c.id)
-            )).scalar() or 0
-
-            active_pol = (await db.execute(
-                select(func.count(Policy.id)).where(
-                    Policy.customer_id == c.id, Policy.status == 'active'
-                )
-            )).scalar() or 0
-
+            latest_end = latest_end_map.get(c.id)
             data.append({
                 "id": str(c.id),
-                "full_name": c.full_name,
-                "phone": c.phone,
-                "email": c.email,
-                "city": c.city,
-                "status": c.status,
-                "total_policies": total_pol,
-                "active_policies": active_pol,
-                "latest_policy_end_date": latest.end_date.isoformat() if latest and latest.end_date else None,
+                "full_name": c.full_name or "",
+                "phone": c.phone or "",
+                "email": c.email or "",
+                "city": c.city or "",
+                "status": c.status or "active",
+                "total_policies": total_pol_map.get(c.id, 0),
+                "active_policies": active_pol_map.get(c.id, 0),
+                "latest_policy_end_date": latest_end.isoformat() if latest_end else None,
             })
 
         return {"total": total, "page": page, "pages": (total + limit - 1) // limit, "data": data}
