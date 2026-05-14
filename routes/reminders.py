@@ -45,73 +45,79 @@ def get_days_until_next_anniversary(start_date: date, current_date: date):
     
     return days_remaining, turning_years
 
-# Customer-based reminders (existing functionality)
 @router.get("/birthdays", response_model=List[ReminderItem])
 async def get_birthdays(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    result = await db.execute(
-        select(Customer).where(Customer.agent_id == current_user.id, Customer.dob.isnot(None))
-    )
-    customers = result.scalars().all()
-    
-    current_date = date.today()
-    reminders = []
-    
-    for c in customers:
-        try:
-            days, turning_age = get_days_until_next_anniversary(c.dob, current_date)
-            # Show ALL upcoming birthdays (not just 30 days)
-            reminders.append(ReminderItem(
-                customer_id=c.id,
-                full_name=c.full_name or "Unknown",
-                phone=c.phone or "",
-                event_date=c.dob,
-                days_remaining=days,
-                turning_age=turning_age,
-                is_today=days == 0
-            ))
-        except Exception:
-            continue
-            
-    reminders.sort(key=lambda x: x.days_remaining)
-    return reminders
+    try:
+        result = await db.execute(
+            select(Customer).where(
+                Customer.agent_id == current_user.id,
+                Customer.dob.isnot(None)
+            )
+        )
+        customers = result.scalars().all()
+        
+        current_date = date.today()
+        reminders = []
+        
+        for c in customers:
+            try:
+                days, turning_age = get_days_until_next_anniversary(c.dob, current_date)
+                reminders.append(ReminderItem(
+                    customer_id=c.id,
+                    full_name=c.full_name or "Unknown",
+                    phone=c.phone or "",
+                    event_date=c.dob,
+                    days_remaining=days,
+                    turning_age=turning_age,
+                    is_today=days == 0
+                ))
+            except Exception:
+                continue
+                
+        reminders.sort(key=lambda x: x.days_remaining)
+        return reminders
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch birthdays: {str(e)}")
 
 @router.get("/anniversaries", response_model=List[ReminderItem])
 async def get_anniversaries(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    result = await db.execute(
-        select(Customer).where(
-            Customer.agent_id == current_user.id,
-            Customer.anniversary_date.isnot(None)
+    try:
+        result = await db.execute(
+            select(Customer).where(
+                Customer.agent_id == current_user.id,
+                Customer.anniversary_date.isnot(None)
+            )
         )
-    )
-    customers = result.scalars().all()
-    
-    current_date = date.today()
-    reminders = []
-    
-    for c in customers:
-        try:
-            days, turning_years = get_days_until_next_anniversary(c.anniversary_date, current_date)
-            # Show ALL upcoming anniversaries (not just 30 days)
-            reminders.append(ReminderItem(
-                customer_id=c.id,
-                full_name=c.full_name or "Unknown",
-                phone=c.phone or "",
-                event_date=c.anniversary_date,
-                days_remaining=days,
-                turning_age=turning_years,
-                is_today=days == 0
-            ))
-        except Exception:
-            continue
-            
-    reminders.sort(key=lambda x: x.days_remaining)
-    return reminders
+        customers = result.scalars().all()
+        
+        current_date = date.today()
+        reminders = []
+        
+        for c in customers:
+            try:
+                days, turning_years = get_days_until_next_anniversary(c.anniversary_date, current_date)
+                reminders.append(ReminderItem(
+                    customer_id=c.id,
+                    full_name=c.full_name or "Unknown",
+                    phone=c.phone or "",
+                    event_date=c.anniversary_date,
+                    days_remaining=days,
+                    turning_age=turning_years,
+                    is_today=days == 0
+                ))
+            except Exception:
+                continue
+                
+        reminders.sort(key=lambda x: x.days_remaining)
+        return reminders
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch anniversaries: {str(e)}")
 
 # Dedicated Reminder CRUD operations
 @router.post("/", response_model=ReminderResponse)
