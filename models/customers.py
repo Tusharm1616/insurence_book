@@ -13,6 +13,7 @@ class Customer(Base):
     phone = Column(String(15))
     email = Column(String(100))
     dob = Column(Date)
+    anniversary_date = Column(Date)          # ← was missing
     address = Column(Text)
     city = Column(String(80))
     state = Column(String(80))
