@@ -96,6 +96,10 @@ async def init_db():
                     "ALTER TABLE customers ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active'"),
                 ("customers add anniversary_date",
                     "ALTER TABLE customers ADD COLUMN IF NOT EXISTS anniversary_date DATE"),
+                ("customers add created_at",
+                    "ALTER TABLE customers ADD COLUMN IF NOT EXISTS created_at DATE DEFAULT CURRENT_DATE"),
+                ("customers add updated_at",
+                    "ALTER TABLE customers ADD COLUMN IF NOT EXISTS updated_at DATE DEFAULT CURRENT_DATE"),
 
                 # ── USERS ────────────────────────────────────────────────────
                 ("users add phone",
