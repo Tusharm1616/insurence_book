@@ -498,6 +498,54 @@ app.include_router(two_wheeler.router)
 app.include_router(add_policy.router)
 app.include_router(vehicle.router)
 app.include_router(terms.router)
+
+
+# ── Admin: clear agent's own data ─────────────────────────────────────────────
+@app.delete("/api/admin/clear-my-data")
+async def clear_agent_data(
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_db),
+):
+    """
+    Delete ALL customers and policies belonging to the authenticated agent.
+    Users/agents are NOT deleted.
+    """
+    from sqlalchemy import text as _t
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    agent_id = current_user.id
+
+    # Count before
+    c_count = (await db.execute(
+        _t("SELECT COUNT(*) FROM customers WHERE agent_id = :a"), {"a": agent_id}
+    )).scalar() or 0
+    p_count = (await db.execute(
+        _t("SELECT COUNT(*) FROM policies WHERE agent_id = :a"), {"a": agent_id}
+    )).scalar() or 0
+
+    # Delete motor policies linked to this agent's policies
+    await db.execute(_t(
+        "DELETE FROM motor_insurance_policies WHERE agent_id = :a"
+    ), {"a": agent_id})
+
+    # Delete policies
+    await db.execute(_t(
+        "DELETE FROM policies WHERE agent_id = :a"
+    ), {"a": agent_id})
+
+    # Delete customers
+    await db.execute(_t(
+        "DELETE FROM customers WHERE agent_id = :a"
+    ), {"a": agent_id})
+
+    await db.commit()
+
+    return {
+        "message": "All your customer and policy data has been deleted.",
+        "deleted_customers": c_count,
+        "deleted_policies": p_count,
+        "agent_id": agent_id,
+    }
 app.include_router(vehicle_documents.router)
 app.include_router(customers_api.router)
 app.include_router(policies_api.router)
