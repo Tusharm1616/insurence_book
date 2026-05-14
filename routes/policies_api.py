@@ -185,10 +185,9 @@ async def create_policy(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Create a new policy.
-    """
+    """Create a new policy. Auto-generates policy_number if not provided."""
     from datetime import date as _date
+    import uuid as _uuid
 
     def _parse_date(val):
         if val is None:
@@ -200,44 +199,74 @@ async def create_policy(
         except (ValueError, TypeError):
             return None
 
+    def _auto_policy_number(policy_type: str) -> str:
+        """Generate a unique policy number from type + timestamp + random hex."""
+        prefix_map = {
+            'health': 'HL', 'motor': 'MI', 'life': 'LI', 'term': 'TM',
+            'travel': 'TR', 'home': 'HM', 'business': 'BS', 'shop': 'SC',
+            'accident': 'AC', 'two wheeler': 'TW', 'two-wheeler': 'TW',
+        }
+        pt = (policy_type or '').lower()
+        prefix = next((v for k, v in prefix_map.items() if k in pt), 'PL')
+        from datetime import datetime
+        return f"{prefix}{datetime.now().strftime('%Y%m%d')}{_uuid.uuid4().hex[:6].upper()}"
+
     try:
         agent_id = current_user.id
 
+        # Resolve customer_id — verify it belongs to this agent if provided
         customer_id = policy_data.get("customer_id")
         if customer_id:
-            customer_query = select(Customer).where(
-                Customer.id == int(customer_id),
-                Customer.agent_id == agent_id
-            )
-            customer_result = await db.execute(customer_query)
-            customer = customer_result.scalars().first()
-            if not customer:
-                raise HTTPException(status_code=404, detail="Customer not found or access denied")
+            try:
+                customer_id = int(customer_id)
+                customer_result = await db.execute(
+                    select(Customer).where(
+                        Customer.id == customer_id,
+                        Customer.agent_id == agent_id
+                    )
+                )
+                if not customer_result.scalars().first():
+                    customer_id = None  # don't block save, just unlink
+            except (ValueError, TypeError):
+                customer_id = None
+
+        # Auto-generate policy number if blank/null
+        raw_pno = policy_data.get("policy_number")
+        policy_number = (raw_pno or "").strip() or _auto_policy_number(
+            policy_data.get("policy_type", "PL")
+        )
+
+        # Ensure policy_type is never null
+        policy_type = (policy_data.get("policy_type") or "Other").strip()
 
         new_policy = Policy(
             agent_id=agent_id,
-            customer_id=int(customer_id) if customer_id else None,
-            policy_number=policy_data.get("policy_number"),
-            policy_type=policy_data.get("policy_type"),
-            insurer_name=policy_data.get("insurer_name"),
-            plan_name=policy_data.get("plan_name"),
-            sum_assured=policy_data.get("sum_assured") or policy_data.get("sum_insured"),
-            premium_amount=policy_data.get("premium_amount"),
+            customer_id=customer_id,
+            policy_number=policy_number,
+            policy_type=policy_type,
+            insurer_name=policy_data.get("insurer_name") or "Unknown",
+            plan_name=policy_data.get("plan_name") or policy_type,
+            sum_assured=policy_data.get("sum_assured") or policy_data.get("sum_insured") or 0,
+            premium_amount=policy_data.get("premium_amount") or 0,
             payment_mode=policy_data.get("payment_mode"),
             start_date=_parse_date(policy_data.get("start_date")),
             end_date=_parse_date(policy_data.get("end_date")),
-            issue_date=_parse_date(policy_data.get("issue_date") or policy_data.get("start_date")),
-            expiry_date=_parse_date(policy_data.get("expiry_date") or policy_data.get("end_date")),
-            status=policy_data.get("status", "active"),
+            issue_date=_parse_date(
+                policy_data.get("issue_date") or policy_data.get("start_date")
+            ),
+            expiry_date=_parse_date(
+                policy_data.get("expiry_date") or policy_data.get("end_date")
+            ),
+            status=(policy_data.get("status") or "active").lower(),
             nominee_name=policy_data.get("nominee_name"),
             nominee_relation=policy_data.get("nominee_relation"),
-            notes=policy_data.get("notes")
+            notes=policy_data.get("notes"),
         )
-        
+
         db.add(new_policy)
         await db.commit()
         await db.refresh(new_policy)
-        
+
         return {
             "id": str(new_policy.id),
             "policy_number": new_policy.policy_number,
@@ -248,15 +277,12 @@ async def create_policy(
             "premium_amount": float(new_policy.premium_amount) if new_policy.premium_amount else 0.0,
             "start_date": new_policy.start_date.isoformat() if new_policy.start_date else None,
             "end_date": new_policy.end_date.isoformat() if new_policy.end_date else None,
+            "issue_date": new_policy.issue_date.isoformat() if new_policy.issue_date else None,
+            "expiry_date": new_policy.expiry_date.isoformat() if new_policy.expiry_date else None,
             "status": new_policy.status,
-            "created_at": new_policy.created_at.isoformat() if new_policy.created_at else None
+            "created_at": new_policy.created_at.isoformat() if new_policy.created_at else None,
         }
-        
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid customer ID format"
-        )
+
     except Exception as e:
         await db.rollback()
         raise HTTPException(
