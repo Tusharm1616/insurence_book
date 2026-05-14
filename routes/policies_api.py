@@ -279,7 +279,6 @@ async def create_policy(
             "issue_date": new_policy.issue_date.isoformat() if new_policy.issue_date else None,
             "expiry_date": new_policy.expiry_date.isoformat() if new_policy.expiry_date else None,
             "status": new_policy.status,
-            "created_at": new_policy.created_at.isoformat() if new_policy.created_at else None,
         }
 
     except Exception as e:
@@ -352,7 +351,6 @@ async def update_policy(
             "start_date": policy.start_date.isoformat() if policy.start_date else None,
             "end_date": policy.end_date.isoformat() if policy.end_date else None,
             "status": policy.status,
-            "updated_at": policy.updated_at.isoformat() if policy.updated_at else None
         }
         
     except ValueError:

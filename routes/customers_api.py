@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func, and_
+from sqlalchemy import func
 from typing import Optional, Dict, Any
-import uuid
+from datetime import date as _date
 
 from database import get_db
 from models.users import User
@@ -13,6 +13,26 @@ from utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/customers", tags=["Customers"])
 
+
+def _parse_date(val) -> _date | None:
+    """Convert string 'YYYY-MM-DD' or datetime.date to date, or return None."""
+    if val is None:
+        return None
+    if isinstance(val, _date):
+        return val
+    try:
+        return _date.fromisoformat(str(val)[:10])
+    except (ValueError, TypeError):
+        return None
+
+
+def _safe_date(obj, field: str) -> str | None:
+    """Safely get a date field that may not exist in the DB yet."""
+    val = getattr(obj, field, None)
+    return val.isoformat() if val else None
+
+
+# ── GET list ──────────────────────────────────────────────────────────────────
 @router.get("/")
 async def get_customers(
     page: int = Query(1, ge=1),
@@ -22,158 +42,110 @@ async def get_customers(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Get paginated list of customers with their latest policy info embedded.
-    Supports filtering by status and searching by name/phone.
-    """
-    
     try:
         agent_id = current_user.id
         offset = (page - 1) * limit
-        
-        # Build base query
+
         query = select(Customer).where(Customer.agent_id == agent_id)
-        
-        # Apply status filter
         if status != "all":
             query = query.where(Customer.status == status)
-        
-        # Apply search filter
         if search:
-            search_term = f"%{search}%"
+            term = f"%{search}%"
             query = query.where(
-                Customer.full_name.ilike(search_term) |
-                Customer.phone.ilike(search_term) |
-                Customer.email.ilike(search_term)
+                Customer.full_name.ilike(term) |
+                Customer.phone.ilike(term) |
+                Customer.email.ilike(term)
             )
-        
-        # Get total count
+
         count_query = select(func.count(Customer.id)).where(Customer.agent_id == agent_id)
         if status != "all":
             count_query = count_query.where(Customer.status == status)
         if search:
-            search_term = f"%{search}%"
+            term = f"%{search}%"
             count_query = count_query.where(
-                Customer.full_name.ilike(search_term) |
-                Customer.phone.ilike(search_term) |
-                Customer.email.ilike(search_term)
+                Customer.full_name.ilike(term) |
+                Customer.phone.ilike(term) |
+                Customer.email.ilike(term)
             )
-        
-        count_result = await db.execute(count_query)
-        total = count_result.scalar() or 0
-        
-        # Get paginated data
-        query = query.order_by(Customer.created_at.desc()).offset(offset).limit(limit)
-        result = await db.execute(query)
-        customers = result.scalars().all()
-        
-        # Build response with latest policy info
-        data = []
-        for customer in customers:
-            # Get latest policy for this customer
-            latest_policy_query = select(Policy).where(
-                Policy.customer_id == customer.id
-            ).order_by(Policy.end_date.desc()).limit(1)
-            
-            latest_policy_result = await db.execute(latest_policy_query)
-            latest_policy = latest_policy_result.scalars().first()
-            
-            # Get policy counts
-            total_policies_query = select(func.count(Policy.id)).where(
-                Policy.customer_id == customer.id
-            )
-            total_policies_result = await db.execute(total_policies_query)
-            total_policies = total_policies_result.scalar() or 0
-            
-            active_policies_query = select(func.count(Policy.id)).where(
-                Policy.customer_id == customer.id,
-                Policy.status == 'active'
-            )
-            active_policies_result = await db.execute(active_policies_query)
-            active_policies = active_policies_result.scalar() or 0
-            
-            customer_data = {
-                "id": str(customer.id),
-                "full_name": customer.full_name,
-                "phone": customer.phone,
-                "email": customer.email,
-                "city": customer.city,
-                "status": customer.status,
-                "total_policies": total_policies,
-                "active_policies": active_policies,
-                "latest_policy_end_date": latest_policy.end_date.isoformat() if latest_policy else None
-            }
-            data.append(customer_data)
-        
-        pages = (total + limit - 1) // limit
-        
-        return {
-            "total": total,
-            "page": page,
-            "pages": pages,
-            "data": data
-        }
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to fetch customers: {str(e)}"
-        )
 
+        total = (await db.execute(count_query)).scalar() or 0
+
+        # Order by id — created_at may not exist in DB yet
+        query = query.order_by(Customer.id.desc()).offset(offset).limit(limit)
+        customers = (await db.execute(query)).scalars().all()
+
+        data = []
+        for c in customers:
+            latest = (await db.execute(
+                select(Policy).where(Policy.customer_id == c.id)
+                .order_by(Policy.end_date.desc()).limit(1)
+            )).scalars().first()
+
+            total_pol = (await db.execute(
+                select(func.count(Policy.id)).where(Policy.customer_id == c.id)
+            )).scalar() or 0
+
+            active_pol = (await db.execute(
+                select(func.count(Policy.id)).where(
+                    Policy.customer_id == c.id, Policy.status == 'active'
+                )
+            )).scalar() or 0
+
+            data.append({
+                "id": str(c.id),
+                "full_name": c.full_name,
+                "phone": c.phone,
+                "email": c.email,
+                "city": c.city,
+                "status": c.status,
+                "total_policies": total_pol,
+                "active_policies": active_pol,
+                "latest_policy_end_date": latest.end_date.isoformat() if latest and latest.end_date else None,
+            })
+
+        return {"total": total, "page": page, "pages": (total + limit - 1) // limit, "data": data}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch customers: {str(e)}")
+
+
+# ── GET detail ────────────────────────────────────────────────────────────────
 @router.get("/{customer_id}")
 async def get_customer_detail(
     customer_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Get full customer detail + all their policies.
-    """
-    
     try:
-        agent_id = current_user.id
-        
-        # Get customer
-        customer_query = select(Customer).where(
-            Customer.id == int(customer_id),
-            Customer.agent_id == agent_id
-        )
-        customer_result = await db.execute(customer_query)
-        customer = customer_result.scalars().first()
-        
-        if not customer:
-            raise HTTPException(
-                status_code=404,
-                detail="Customer not found"
+        customer = (await db.execute(
+            select(Customer).where(
+                Customer.id == int(customer_id),
+                Customer.agent_id == current_user.id
             )
-        
-        # Get all policies for this customer
-        policies_query = select(Policy).where(
-            Policy.customer_id == customer.id
-        ).order_by(Policy.created_at.desc())
-        
-        policies_result = await db.execute(policies_query)
-        policies = policies_result.scalars().all()
-        
-        # Build policies data
-        policies_data = []
-        for policy in policies:
-            policy_data = {
-                "id": str(policy.id),
-                "policy_number": policy.policy_number,
-                "policy_type": policy.policy_type,
-                "insurer_name": policy.insurer_name,
-                "plan_name": policy.plan_name,
-                "sum_insured": float(policy.sum_assured) if policy.sum_assured else 0.0,
-                "premium_amount": float(policy.premium_amount) if policy.premium_amount else 0.0,
-                "start_date": policy.start_date.isoformat() if policy.start_date else None,
-                "end_date": policy.end_date.isoformat() if policy.end_date else None,
-                "status": policy.status,
-                "nominee_name": policy.nominee_name,
-                "nominee_relation": policy.nominee_relation
-            }
-            policies_data.append(policy_data)
-        
+        )).scalars().first()
+
+        if not customer:
+            raise HTTPException(status_code=404, detail="Customer not found")
+
+        policies = (await db.execute(
+            select(Policy).where(Policy.customer_id == customer.id).order_by(Policy.id.desc())
+        )).scalars().all()
+
+        policies_data = [{
+            "id": str(p.id),
+            "policy_number": p.policy_number,
+            "policy_type": p.policy_type,
+            "insurer_name": p.insurer_name,
+            "plan_name": p.plan_name,
+            "sum_insured": float(p.sum_assured) if p.sum_assured else 0.0,
+            "premium_amount": float(p.premium_amount) if p.premium_amount else 0.0,
+            "start_date": p.start_date.isoformat() if p.start_date else None,
+            "end_date": p.end_date.isoformat() if p.end_date else None,
+            "status": p.status,
+            "nominee_name": p.nominee_name,
+            "nominee_relation": p.nominee_relation,
+        } for p in policies]
+
         return {
             "id": str(customer.id),
             "full_name": customer.full_name,
@@ -185,48 +157,26 @@ async def get_customer_detail(
             "state": customer.state,
             "pincode": customer.pincode,
             "status": customer.status,
-            "created_at": customer.created_at.isoformat() if customer.created_at else None,
-            "policies": policies_data
+            "created_at": _safe_date(customer, "created_at"),
+            "policies": policies_data,
         }
-        
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid customer ID format"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to fetch customer detail: {str(e)}"
-        )
 
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid customer ID format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch customer detail: {str(e)}")
+
+
+# ── POST create ───────────────────────────────────────────────────────────────
 @router.post("/")
 async def create_customer(
     customer_data: Dict[str, Any],
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Create a new customer.
-    """
-    from datetime import date as _date
-
-    def _parse_date(val) -> _date | None:
-        """Convert string 'YYYY-MM-DD' or datetime.date to date, or return None."""
-        if val is None:
-            return None
-        if isinstance(val, _date):
-            return val
-        try:
-            return _date.fromisoformat(str(val)[:10])
-        except (ValueError, TypeError):
-            return None
-
     try:
-        agent_id = current_user.id
-
         new_customer = Customer(
-            agent_id=agent_id,
+            agent_id=current_user.id,
             full_name=customer_data.get("full_name"),
             phone=customer_data.get("phone"),
             email=customer_data.get("email"),
@@ -235,9 +185,8 @@ async def create_customer(
             city=customer_data.get("city"),
             state=customer_data.get("state"),
             pincode=customer_data.get("pincode"),
-            status=customer_data.get("status", "active")
+            status=customer_data.get("status", "active"),
         )
-
         db.add(new_customer)
         await db.commit()
         await db.refresh(new_customer)
@@ -249,33 +198,15 @@ async def create_customer(
             "email": new_customer.email,
             "city": new_customer.city,
             "status": new_customer.status,
-            "created_at": new_customer.created_at.isoformat() if new_customer.created_at else None
+            "created_at": _safe_date(new_customer, "created_at"),
         }
 
     except Exception as e:
         await db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create customer: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to create customer: {str(e)}")
 
-        return {
-            "id": str(new_customer.id),
-            "full_name": new_customer.full_name,
-            "phone": new_customer.phone,
-            "email": new_customer.email,
-            "city": new_customer.city,
-            "status": new_customer.status,
-            "created_at": new_customer.created_at.isoformat() if new_customer.created_at else None
-        }
 
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create customer: {str(e)}"
-        )
-
+# ── PUT update ────────────────────────────────────────────────────────────────
 @router.put("/{customer_id}")
 async def update_customer(
     customer_id: str,
@@ -283,45 +214,25 @@ async def update_customer(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Update an existing customer.
-    """
-    from datetime import date as _date
-
-    def _parse_date(val):
-        if val is None:
-            return None
-        if isinstance(val, _date):
-            return val
-        try:
-            return _date.fromisoformat(str(val)[:10])
-        except (ValueError, TypeError):
-            return None
-
     DATE_FIELDS = {"dob", "anniversary_date"}
-
     try:
-        agent_id = current_user.id
-
-        customer_query = select(Customer).where(
-            Customer.id == int(customer_id),
-            Customer.agent_id == agent_id
-        )
-        customer_result = await db.execute(customer_query)
-        customer = customer_result.scalars().first()
+        customer = (await db.execute(
+            select(Customer).where(
+                Customer.id == int(customer_id),
+                Customer.agent_id == current_user.id
+            )
+        )).scalars().first()
 
         if not customer:
             raise HTTPException(status_code=404, detail="Customer not found")
 
         for field, value in customer_data.items():
             if hasattr(customer, field) and value is not None:
-                if field in DATE_FIELDS:
-                    value = _parse_date(value)
-                setattr(customer, field, value)
+                setattr(customer, field, _parse_date(value) if field in DATE_FIELDS else value)
 
         await db.commit()
         await db.refresh(customer)
-        
+
         return {
             "id": str(customer.id),
             "full_name": customer.full_name,
@@ -329,17 +240,11 @@ async def update_customer(
             "email": customer.email,
             "city": customer.city,
             "status": customer.status,
-            "updated_at": customer.updated_at.isoformat() if customer.updated_at else None
+            "updated_at": _safe_date(customer, "updated_at"),
         }
-        
+
     except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid customer ID format"
-        )
+        raise HTTPException(status_code=400, detail="Invalid customer ID format")
     except Exception as e:
         await db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to update customer: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to update customer: {str(e)}")

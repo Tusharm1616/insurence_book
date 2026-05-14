@@ -41,10 +41,6 @@ class Policy(Base):
     nominee_relation = Column(String(60))
     notes = Column(Text)
 
-    # Timestamps
-    created_at = Column(Date, server_default='now()')
-    updated_at = Column(Date, server_default='now()')
-
     # Relationships
     customer = relationship("Customer", back_populates="policies")
     agent = relationship("User", foreign_keys=[agent_id])
