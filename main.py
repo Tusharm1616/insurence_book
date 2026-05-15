@@ -20,6 +20,7 @@ from models.users import User, UserRole
 
 from fastapi.middleware.cors import CORSMiddleware
 from routes import auth, customers, policies, dashboard, life_insurance, reminders, motor, two_wheeler, add_policy, vehicle, terms, vehicle_documents, customers_api, policies_api
+from routes import notifications as notifications_router
 
 # Rate limiting
 limiter = Limiter(key_func=get_remote_address)
@@ -432,8 +433,27 @@ async def lifespan(app: FastAPI):
     logger = logging.getLogger(__name__)
     logger.info("Starting InsureBook API...")
     await init_db()
+
+    # ── Start background scheduler ────────────────────────────────────────
+    try:
+        from utils.scheduler import start_scheduler
+        start_scheduler()
+        logger.info("Background scheduler started.")
+    except Exception as sched_err:
+        logger.error("Scheduler failed to start: %s", sched_err)
+
     logger.info("InsureBook API started successfully")
     yield
+
+    # ── Shutdown scheduler ────────────────────────────────────────────────
+    try:
+        from utils.scheduler import scheduler as _scheduler
+        if _scheduler.running:
+            _scheduler.shutdown(wait=False)
+            logger.info("Background scheduler stopped.")
+    except Exception as sched_err:
+        logger.error("Scheduler shutdown error: %s", sched_err)
+
     logger.info("Shutting down InsureBook API...")
 
 
@@ -549,6 +569,7 @@ async def clear_agent_data(
 app.include_router(vehicle_documents.router)
 app.include_router(customers_api.router)
 app.include_router(policies_api.router)
+app.include_router(notifications_router.router)
 
 from datetime import datetime
 
