@@ -730,22 +730,57 @@ async def api_generate_quote_pdf(
     doc = SimpleDocTemplate(filepath, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
     elements = []
     styles = getSampleStyleSheet()
-    
-    # Header table
-    header_data = [
-        [Paragraph(f"<font color=white size=18><b>{current_user.full_name} Agency</b></font><br/>"
-                   f"<font color=white size=13>{current_user.full_name}</font><br/>"
-                   f"<font color=white size=12>Ph: {current_user.phone}</font><br/>"
-                   f"<font color=white size=11><i>License: {current_user.license_no}</i></font>"), 
-         Paragraph(f"<font color=white size=20><b>MOTOR INSURANCE</b></font><br/>"
-                   f"<font color=white size=16><b>PREMIUM QUOTE</b></font><br/>"
-                   f"<font color=white size=11>Ref: {req.quote_reference}</font>", styles['Normal'])]
-    ]
-    t = Table(header_data, colWidths=[300, 230])
+
+    # ── Custom styles for header ──────────────────────────────────────────
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_LEFT, TA_RIGHT
+
+    left_style = ParagraphStyle(
+        'HeaderLeft',
+        fontName='Helvetica-Bold',
+        fontSize=10,
+        leading=16,
+        textColor=colors.white,
+        alignment=TA_LEFT,
+    )
+    right_style = ParagraphStyle(
+        'HeaderRight',
+        fontName='Helvetica-Bold',
+        fontSize=10,
+        leading=16,
+        textColor=colors.white,
+        alignment=TA_RIGHT,
+    )
+
+    agent_name  = (current_user.full_name or "Agent").strip()
+    agent_phone = (current_user.phone or "").strip()
+    agent_lic   = (current_user.license_no or "").strip()
+
+    left_para = Paragraph(
+        f"<b><font size=16>{agent_name} Agency</font></b><br/>"
+        f"<font size=11>{agent_name}</font><br/>"
+        + (f"<font size=10>Ph: {agent_phone}</font><br/>" if agent_phone else "")
+        + (f"<font size=9>License: {agent_lic}</font>" if agent_lic else ""),
+        left_style,
+    )
+    right_para = Paragraph(
+        f"<b><font size=18>MOTOR INSURANCE</font></b><br/>"
+        f"<b><font size=14>PREMIUM QUOTE</font></b><br/>"
+        f"<font size=9>Ref: {req.quote_reference}</font>",
+        right_style,
+    )
+
+    # Use full usable width (A4 = 595pt, margins 30+30 = 535pt usable)
+    header_data = [[left_para, right_para]]
+    t = Table(header_data, colWidths=[267, 268])
     t.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#4CAF50')),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('PADDING', (0,0), (-1,-1), 15),
+        ('BACKGROUND',  (0, 0), (-1, -1), colors.HexColor('#4CAF50')),
+        ('VALIGN',      (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING',  (0, 0), (-1, -1), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 14),
+        ('LEFTPADDING', (0, 0), (0, -1), 14),
+        ('RIGHTPADDING', (1, 0), (1, -1), 14),
+        ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.HexColor('#4CAF50')]),
     ]))
     elements.append(t)
     elements.append(Spacer(1, 20))
