@@ -65,15 +65,31 @@ class WhatsAppService:
         Output: 'whatsapp:+919876543210'
         """
         digits = phone.strip().replace(" ", "").replace("-", "")
+        # Already fully formatted
         if digits.startswith("whatsapp:"):
-            return digits  # already formatted
+            return digits
+        # Strip whatsapp: prefix if present in a different form
+        if "whatsapp:" in digits:
+            digits = digits.split("whatsapp:")[-1]
+        # Already has + prefix
         if digits.startswith("+"):
             return f"whatsapp:{digits}"
+        # 12-digit with country code 91 (India)
         if digits.startswith("91") and len(digits) == 12:
             return f"whatsapp:+{digits}"
-        if len(digits) == 10:
+        # 10-digit Indian mobile number
+        if len(digits) == 10 and digits[0] in "6789":
             return f"whatsapp:+91{digits}"
+        # Fallback — prepend + and wrap
         return f"whatsapp:+{digits}"
+
+    @staticmethod
+    def _normalise_from(from_number: str) -> str:
+        """Ensure the from number has the whatsapp: prefix."""
+        s = from_number.strip()
+        if s.startswith("whatsapp:"):
+            return s
+        return f"whatsapp:{s}"
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -94,24 +110,28 @@ class WhatsAppService:
 
         try:
             client = self._get_client()
-            to_formatted = self._normalise_phone(to_phone)
+            to_formatted  = self._normalise_phone(to_phone)
+            from_formatted = self._normalise_from(self.from_number)
+
+            logger.info(
+                "WhatsApp sending | from=%s | to=%s",
+                from_formatted, to_formatted,
+            )
+
             msg = client.messages.create(
-                from_=self.from_number,
+                from_=from_formatted,
                 to=to_formatted,
-                body=message[:1600],  # Twilio hard limit
+                body=message[:1600],
             )
             logger.info(
                 "WhatsApp sent | SID=%s | to=%s | status=%s",
-                msg.sid,
-                to_formatted,
-                msg.status,
+                msg.sid, to_formatted, msg.status,
             )
             return True
         except Exception as exc:
             logger.error(
-                "WhatsApp send failed | to=%s | error=%s",
-                to_phone,
-                exc,
+                "WhatsApp send failed | to=%s | from=%s | error=%s",
+                to_phone, self.from_number, exc,
             )
             return False
 
