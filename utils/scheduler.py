@@ -28,9 +28,18 @@ scheduler = AsyncIOScheduler(timezone="Asia/Kolkata")
 
 # ── Helper ────────────────────────────────────────────────────────────────────
 
-def _fmt_date(d: date) -> str:
-    """Format a date as '15 June 2026'."""
-    return d.strftime("%-d %B %Y") if hasattr(d, "strftime") else str(d)
+def _fmt_date(d) -> str:
+    """Format a date as '15 June 2026'. Works on Linux and Windows."""
+    if not d:
+        return "N/A"
+    try:
+        # Remove leading zero from day without platform-specific %-d
+        day = str(d.day)          # '5' or '15'
+        month = d.strftime("%B")  # 'June'
+        year = d.strftime("%Y")   # '2026'
+        return f"{day} {month} {year}"
+    except Exception:
+        return str(d)
 
 
 # ── Job 1 — Birthday wishes ───────────────────────────────────────────────────
@@ -79,7 +88,11 @@ async def job_birthday_wishes() -> None:
                         cid, full_name,
                     )
                 else:
-                    skipped += 1
+                    errors += 1
+                    logger.warning(
+                        "[Scheduler] Birthday wish not delivered | customer_id=%s | phone=%s",
+                        cid, phone,
+                    )
             except Exception as exc:
                 errors += 1
                 logger.error(
@@ -144,7 +157,11 @@ async def job_anniversary_wishes() -> None:
                         cid, full_name,
                     )
                 else:
-                    skipped += 1
+                    errors += 1
+                    logger.warning(
+                        "[Scheduler] Anniversary wish not delivered | customer_id=%s | phone=%s",
+                        cid, phone,
+                    )
             except Exception as exc:
                 errors += 1
                 logger.error(
@@ -225,7 +242,11 @@ async def job_policy_expiry_reminders() -> None:
                             pid, full_name, days_left,
                         )
                     else:
-                        skipped += 1
+                        errors += 1
+                        logger.warning(
+                            "[Scheduler] Expiry reminder not delivered | policy_id=%s | phone=%s",
+                            pid, phone,
+                        )
                 except Exception as exc:
                     errors += 1
                     logger.error(
