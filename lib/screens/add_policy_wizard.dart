@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../models/policy_model.dart';
-import '../providers/policy_provider.dart';
-import '../providers/customer_provider.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/life_report_provider.dart';
 import '../providers/expiring_policies_provider.dart';
 import '../providers/customers_provider.dart';
 import '../providers/policies_provider.dart';
+import '../services/api_service.dart';
 
 class AddPolicyWizard extends ConsumerStatefulWidget {
   final String policyType;
@@ -45,6 +44,7 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
   String? _selectedCustomerName;
   String? _policyHolder;
   final _referenceCtrl = TextEditingController();
+  final _clientNameCtrl = TextEditingController();
 
   // -- Step 2: Vehicle --
   String _vehicleType = 'Private Car';
@@ -84,11 +84,13 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
       _selectedCustomerId = widget.prefilledCustomerId;
       _selectedCustomerName = widget.prefilledCustomerName;
       _policyHolder = widget.prefilledCustomerName;
+      _clientNameCtrl.text = widget.prefilledCustomerName ?? '';
     }
   }
 
   @override
   void dispose() {
+    _clientNameCtrl.dispose();
     _referenceCtrl.dispose();
     _vehicleNoCtrl.dispose();
     _makeCtrl.dispose();
@@ -107,10 +109,6 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
 
   void _next() {
     if (_currentStep == 0) {
-      if (_selectedCustomerId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a client'), backgroundColor: Colors.red));
-        return;
-      }
       if (_clientFormKey.currentState?.validate() ?? false) {
         setState(() => _currentStep++);
       }
@@ -140,68 +138,77 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
   }
 
   Future<void> _save() async {
-    final extraData = {
-      'customerName': _selectedCustomerName ?? '',
-      'policyHolder': _policyHolder ?? '',
-      'referenceBy': _referenceCtrl.text.trim(),
-      // Policy fields
-      'tpPremium': _tpPremiumCtrl.text.trim(),
-      'paymentFrequency': _paymentFreq,
-      'status': _status,
-      'nomineeName': _nomineeCtrl.text.trim(),
-      'nomineeRelation': _relationCtrl.text.trim(),
-    };
-
-    if (widget.isMotor) {
-      extraData.addAll({
-        'vehicleType': _vehicleType,
-        'vehicleNumber': _vehicleNoCtrl.text.trim(),
-        'make': _makeCtrl.text.trim(),
-        'model': _modelCtrl.text.trim(),
-        'regYear': _regYearCtrl.text.trim(),
-        'fuelType': _fuelType,
-        'engineNumber': _engineNoCtrl.text.trim(),
-        'chassisNumber': _chassisNoCtrl.text.trim(),
-      });
-    }
-
-    final policy = Policy(
-      id: DateTime.now().millisecondsSinceEpoch,
-      customerId: _selectedCustomerId,
-      policyType: widget.policyType,
-      policyNumber: _policyNoCtrl.text.trim(), // backend auto-generates if blank/random
-      insuranceCompany: _insuranceCompany ?? 'Unknown',
-      sumInsured: double.tryParse(_sumInsuredCtrl.text.replaceAll(',', '')) ?? 0.0,
-      premium: double.tryParse(_totalPremiumCtrl.text.replaceAll(',', '')) ?? 0,
-      startDate: _startDate,
-      expiryDate: _expiryDate!,
-      status: _status.toLowerCase(),
-      nomineeName: _nomineeCtrl.text.trim().isNotEmpty ? _nomineeCtrl.text.trim() : null,
-      nomineeRelation: _relationCtrl.text.trim().isNotEmpty ? _relationCtrl.text.trim() : null,
-      extraData: extraData,
-    );
+    final clientName = _clientNameCtrl.text.trim();
+    final policyHolder = _policyHolder?.trim() ?? clientName;
 
     try {
-      await ref.read(policyProvider.notifier).addPolicy(policy);
+      // Build payload directly for /api/policies/ endpoint
+      final payload = <String, dynamic>{
+        'policy_type': widget.policyType,
+        // Never send null — backend auto-generates if empty string
+        'policy_number': _policyNoCtrl.text.trim(),
+        'insurer_name': _insuranceCompany ?? 'Unknown',
+        'plan_name': policyHolder.isNotEmpty ? policyHolder : clientName,
+        'sum_assured': double.tryParse(_sumInsuredCtrl.text.replaceAll(',', '')) ?? 0.0,
+        'premium_amount': double.tryParse(_totalPremiumCtrl.text.replaceAll(',', '')) ?? 0.0,
+        'start_date': _startDate.toIso8601String().split('T').first,
+        'end_date': _expiryDate!.toIso8601String().split('T').first,
+        'issue_date': _startDate.toIso8601String().split('T').first,
+        'expiry_date': _expiryDate!.toIso8601String().split('T').first,
+        'status': _status.toLowerCase(),
+        if (_nomineeCtrl.text.trim().isNotEmpty)
+          'nominee_name': _nomineeCtrl.text.trim(),
+        if (_relationCtrl.text.trim().isNotEmpty)
+          'nominee_relation': _relationCtrl.text.trim(),
+        'notes': [
+          if (clientName.isNotEmpty) 'Client: $clientName',
+          if (_referenceCtrl.text.trim().isNotEmpty)
+            'Ref: ${_referenceCtrl.text.trim()}',
+          if (widget.isMotor) ...[
+            'Vehicle: ${_vehicleNoCtrl.text.trim()}',
+            'Make/Model: ${_makeCtrl.text.trim()} ${_modelCtrl.text.trim()}',
+          ],
+        ].join(' | '),
+      };
+
+      // If customer_id is available (prefilled), include it
+      if (_selectedCustomerId != null) {
+        payload['customer_id'] = _selectedCustomerId;
+      }
+
+      await apiService.dio.post('/api/policies/', data: payload);
+
       if (!mounted) return;
-      
-      // Invalidate dashboard counts so they refresh automatically
-      ref.invalidate(dashboardStatsProvider);
+
+      // Use fetchDashboardStats() directly instead of invalidate()
+      // invalidate() resets to loading but doesn't auto-refetch unless build() does it
+      ref.read(dashboardStatsProvider.notifier).fetchDashboardStats();
       ref.invalidate(lifeReportProvider);
       ref.invalidate(expiringPoliciesProvider);
       ref.invalidate(customersProvider);
       ref.invalidate(policiesProvider);
 
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Row(children: [Icon(Icons.check_circle, color: Colors.white), SizedBox(width: 8), Text('Policy saved successfully!')]),
+        content: Row(children: [
+          Icon(Icons.check_circle, color: Colors.white),
+          SizedBox(width: 8),
+          Text('Policy saved successfully!'),
+        ]),
         backgroundColor: Colors.green,
       ));
 
-      // Pop back to dashboard
       Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save policy: $e'), backgroundColor: Colors.red));
+      // Show clean error message
+      String msg = 'Failed to save policy. Please try again.';
+      try {
+        final detail = (e as dynamic).response?.data?['detail'];
+        if (detail != null) msg = detail.toString();
+      } catch (_) {}
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -393,36 +400,40 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader('Client Details', 'Who is this policy for?'),
+
+          // ── Client Name (simple text field) ──────────────────────────────
           _label('Client Name', isRequired: true),
-          Consumer(builder: (context, ref, child) {
-            final customers = ref.watch(customerProvider).asData?.value ?? [];
-            return DropdownButtonFormField<int>(
-              initialValue: _selectedCustomerId,
-              decoration: _inputDeco(),
-              items: customers.map((c) => DropdownMenuItem(value: c.id, child: Text(c.fullName))).toList(),
-              onChanged: (val) {
-                setState(() {
-                  _selectedCustomerId = val;
-                  _selectedCustomerName = customers.firstWhere((c) => c.id == val).fullName;
-                  _policyHolder = _selectedCustomerName;
-                });
-              },
-              validator: (v) => v == null ? 'Required' : null,
-            );
-          }),
-          
+          TextFormField(
+            controller: _clientNameCtrl,
+            textCapitalization: TextCapitalization.words,
+            decoration: _inputDeco(hint: 'Enter client name'),
+            onChanged: (val) {
+              _selectedCustomerName = val.trim();
+              // Auto-fill Policy Holder if it's still empty
+              if (_policyHolder == null || _policyHolder!.isEmpty) {
+                setState(() => _policyHolder = val.trim());
+              }
+            },
+            validator: (v) =>
+                (v == null || v.trim().isEmpty) ? 'Client name is required' : null,
+          ),
+
+          // ── Policy Holder ─────────────────────────────────────────────────
           _label('Policy Holder', isRequired: true),
           TextFormField(
             initialValue: _policyHolder,
-            decoration: _inputDeco(),
+            textCapitalization: TextCapitalization.words,
+            decoration: _inputDeco(hint: 'Name of the policy holder'),
             onChanged: (val) => _policyHolder = val,
-            validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+            validator: (v) =>
+                (v == null || v.trim().isEmpty) ? 'Required' : null,
           ),
 
+          // ── Reference By ──────────────────────────────────────────────────
           _label('Reference By', isOptional: true),
           TextFormField(
             controller: _referenceCtrl,
-            decoration: _inputDeco(),
+            decoration: _inputDeco(hint: 'Referred by (optional)'),
           ),
 
           const SizedBox(height: 24),
@@ -433,21 +444,22 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: widget.color.withValues(alpha: 0.3)),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Icon(widget.icon, color: widget.color, size: 20),
-                    const SizedBox(width: 8),
-                    Text(widget.policyType, style: TextStyle(color: widget.color, fontWeight: FontWeight.bold, fontSize: 16)),
-                  ],
+                Icon(widget.icon, color: widget.color, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.policyType,
+                    style: TextStyle(
+                        color: widget.color,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15),
+                  ),
                 ),
-                const SizedBox(height: 8),
-                const Text('Complete the required fields to proceed to the next step. Ensure all details are accurate.', style: TextStyle(color: Colors.black87, fontSize: 13)),
               ],
             ),
-          )
+          ),
         ],
       ),
     );

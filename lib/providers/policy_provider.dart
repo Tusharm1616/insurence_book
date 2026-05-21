@@ -30,7 +30,12 @@ class PolicyNotifier extends Notifier<List<Policy>> {
 
   Future<void> addPolicy(Policy policy) async {
     try {
-      final response = await apiService.dio.post('/policies/', data: policy.toJson());
+      // Use the simple REST endpoint /api/policies/ which accepts plain JSON
+      // (not the complex /api/add-policy/ which requires full AddPolicyRequest schema)
+      final response = await apiService.dio.post(
+        '/api/policies/',
+        data: policy.toJson(),
+      );
       final newPolicy = Policy.fromJson(response.data);
       state = [...state, newPolicy];
     } catch (e) {

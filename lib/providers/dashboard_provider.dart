@@ -21,7 +21,11 @@ class DashboardStats {
 
 class DashboardNotifier extends Notifier<AsyncValue<DashboardStats>> {
   @override
-  AsyncValue<DashboardStats> build() => const AsyncValue.loading();
+  AsyncValue<DashboardStats> build() {
+    // Auto-fetch on first build AND after invalidation
+    Future.microtask(() => fetchDashboardStats());
+    return const AsyncValue.loading();
+  }
 
   Future<void> fetchDashboardStats() async {
     state = const AsyncValue.loading();

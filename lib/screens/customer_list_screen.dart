@@ -226,56 +226,64 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        customer.fullName,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1C1C1C),
-                          fontFamily: 'Poppins',
+                  child: GestureDetector(
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      '/customer_detail',
+                      arguments: {'customerId': customer.id.toString()},
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          customer.fullName,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1C1C1C),
+                            fontFamily: 'Poppins',
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              customer.mobileNumber,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF6B7280),
-                                fontFamily: 'Poppins',
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                customer.mobileNumber,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF6B7280),
+                                  fontFamily: 'Poppins',
+                                ),
                               ),
+                            ),
+                          ],
+                        ),
+                        if (customer.email != null && customer.email!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            customer.email!,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF6B7280),
+                              fontFamily: 'Poppins',
                             ),
                           ),
                         ],
-                      ),
-                      if (customer.email != null && customer.email!.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          customer.email!,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF6B7280),
-                            fontFamily: 'Poppins',
+                        if ((customer.city ?? '').isNotEmpty || (customer.state ?? '').isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            '${customer.city ?? ''}${(customer.city ?? '').isNotEmpty && (customer.state ?? '').isNotEmpty ? ', ' : ''}${customer.state ?? ''}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF6B7280),
+                              fontFamily: 'Poppins',
+                            ),
                           ),
-                        ),
+                        ],
                       ],
-                      if ((customer.city ?? '').isNotEmpty || (customer.state ?? '').isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          '${customer.city ?? ''}${(customer.city ?? '').isNotEmpty && (customer.state ?? '').isNotEmpty ? ', ' : ''}${customer.state ?? ''}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF6B7280),
-                            fontFamily: 'Poppins',
-                          ),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
                 ),
                 Container(
@@ -306,7 +314,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                     () => _openWhatsApp(context, customer.mobileNumber),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: _outlineButton(
                     'Call',
@@ -328,7 +336,7 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                     () => _deactivateOrActivate(context, customer),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: _filledButton(
                     'All Policy',
@@ -356,11 +364,16 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
   Widget _outlineButton(String label, IconData icon, Color color, VoidCallback onTap) {
     return OutlinedButton.icon(
       onPressed: onTap,
-      icon: Icon(icon, size: 16, color: color),
-      label: Text(label, style: TextStyle(color: color, fontSize: 13)),
+      icon: Icon(icon, size: 15, color: color),
+      label: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 12),
+        overflow: TextOverflow.ellipsis,
+      ),
       style: OutlinedButton.styleFrom(
         side: BorderSide(color: color),
-        minimumSize: const Size(0, 40),
+        minimumSize: const Size(0, 38),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
@@ -369,10 +382,16 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
   Widget _filledButton(String label, IconData icon, Color color, VoidCallback onTap) {
     return ElevatedButton.icon(
       onPressed: onTap,
-      icon: Icon(icon, size: 16, color: Colors.white),
-      label: Text(label, style: const TextStyle(color: Colors.white, fontSize: 13)),
+      icon: Icon(icon, size: 15, color: Colors.white),
+      label: Text(
+        label,
+        style: const TextStyle(color: Colors.white, fontSize: 12),
+        overflow: TextOverflow.ellipsis,
+      ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: color, minimumSize: const Size(0, 40),
+        backgroundColor: color,
+        minimumSize: const Size(0, 38),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );

@@ -65,10 +65,10 @@ class AddPolicyTypeScreen extends StatelessWidget {
             child: GridView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2, 
-                crossAxisSpacing: 12, 
-                mainAxisSpacing: 12, 
-                childAspectRatio: 0.8,
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 0.75,
               ),
               itemCount: types.length,
               itemBuilder: (context, index) {
@@ -90,27 +90,47 @@ class AddPolicyTypeScreen extends StatelessWidget {
                     }
                   },
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: (t['color'] as Color).withValues(alpha: 0.2)),
                       boxShadow: [
-                        BoxShadow(color: (t['color'] as Color).withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4))
+                        BoxShadow(
+                          color: (t['color'] as Color).withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        )
                       ],
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
                           padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(color: t['bgColor'] as Color, shape: BoxShape.circle),
-                          child: Icon(t['icon'] as IconData, color: t['color'] as Color, size: 32),
+                          decoration: BoxDecoration(
+                            color: t['bgColor'] as Color,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(t['icon'] as IconData, color: t['color'] as Color, size: 28),
                         ),
-                        const SizedBox(height: 16),
-                        Text(t['title'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), textAlign: TextAlign.center),
-                        const SizedBox(height: 8),
-                        Text(t['subtitle'] as String, style: const TextStyle(fontSize: 11, color: Colors.grey), textAlign: TextAlign.center),
+                        const SizedBox(height: 12),
+                        Text(
+                          t['title'] as String,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          t['subtitle'] as String,
+                          style: const TextStyle(fontSize: 11, color: Colors.grey),
+                          textAlign: TextAlign.center,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     ),
                   ),

@@ -81,7 +81,7 @@ class PoliciesNotifier extends Notifier<AsyncValue<PolicyListResponse>> {
         if (_searchQuery.isNotEmpty) 'search': _searchQuery,
       };
 
-      final response = await apiService.dio.get('/api/policies', queryParameters: queryParams);
+      final response = await apiService.dio.get('/api/policies/', queryParameters: queryParams);
       final policyListResponse = PolicyListResponse(
         total: response.data['total'] ?? 0,
         page: response.data['page'] ?? 1,
@@ -93,15 +93,15 @@ class PoliciesNotifier extends Notifier<AsyncValue<PolicyListResponse>> {
                   policyType: policy['policy_type'] ?? '',
                   insurerName: policy['insurer_name'] ?? '',
                   planName: policy['plan_name'] ?? '',
-                  sumInsured: (policy['sum_insured'] ?? 0.0).toDouble(),
+                  sumInsured: (policy['sum_assured'] ?? policy['sum_insured'] ?? 0.0).toDouble(),
                   premiumAmount: (policy['premium_amount'] ?? 0.0).toDouble(),
                   startDate: policy['start_date'] ?? '',
                   endDate: policy['end_date'] ?? '',
                   status: policy['status'] ?? '',
                   customer: CustomerInfo(
-                    id: policy['customer']['id'] ?? '',
-                    fullName: policy['customer']['full_name'] ?? '',
-                    phone: policy['customer']['phone'] ?? '',
+                    id: policy['customer']?['id'] ?? '',
+                    fullName: policy['customer']?['full_name'] ?? 'Unknown',
+                    phone: policy['customer']?['phone'] ?? '',
                   ),
                   daysRemaining: policy['days_remaining'] ?? 0,
                 ))

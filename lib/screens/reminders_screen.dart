@@ -11,7 +11,7 @@ class RemindersScreen extends ConsumerWidget {
   const RemindersScreen({super.key, required this.type});
 
   Future<void> _launchWhatsApp(String phone, String name, String type) async {
-    final message = type == 'birthdays' 
+    final message = (type == 'birthdays' || type == 'birthday')
       ? 'Happy Birthday $name! Wishing you a fantastic day!'
       : 'Happy Anniversary $name! Wishing you many more years of happiness together!';
     
@@ -44,7 +44,7 @@ class RemindersScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isBirthday = type == 'birthdays';
+    final isBirthday = type == 'birthdays' || type == 'birthday';
     final title = isBirthday ? 'Birthday Reminders' : 'Anniversary Reminders';
     final themeColor = isBirthday ? Colors.pink : Colors.red;
     
@@ -60,7 +60,50 @@ class RemindersScreen extends ConsumerWidget {
       body: asyncData.when(
         data: (items) => _buildList(items, themeColor),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Error: $e')),
+        error: (e, stack) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(LucideIcons.wifiOff, size: 56, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                Text(
+                  'Could not load reminders',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  e.toString().replaceAll('Exception: ', ''),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    if (isBirthday) {
+                      ref.read(birthdaysProvider.notifier).refresh();
+                    } else {
+                      ref.read(anniversariesProvider.notifier).refresh();
+                    }
+                  },
+                  icon: const Icon(LucideIcons.refreshCw, size: 16),
+                  label: const Text('Retry'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeColor,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -73,26 +116,44 @@ class RemindersScreen extends ConsumerWidget {
           children: [
             Icon(LucideIcons.calendarX, size: 64, color: Colors.grey.shade400),
             const SizedBox(height: 16),
-            const Text('No upcoming reminders in next 30 days', style: TextStyle(color: Colors.grey)),
+            Text(
+              (type == 'birthdays' || type == 'birthday')
+                  ? 'No birthdays found.\nAdd DOB when creating customers.'
+                  : 'No anniversaries found.\nAdd anniversary date when creating customers.',
+              style: const TextStyle(color: Colors.grey, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       );
     }
 
-    final todayItems = items.where((i) => i.isToday).toList();
-    final upcomingItems = items.where((i) => !i.isToday).toList();
+    final todayItems    = items.where((i) => i.daysRemaining == 0).toList();
+    final weekItems     = items.where((i) => i.daysRemaining > 0 && i.daysRemaining <= 7).toList();
+    final monthItems    = items.where((i) => i.daysRemaining > 7 && i.daysRemaining <= 30).toList();
+    final laterItems    = items.where((i) => i.daysRemaining > 30).toList();
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         if (todayItems.isNotEmpty) ...[
-          _buildSectionHeader('Today', Colors.green),
+          _buildSectionHeader('🎉 Today', Colors.green),
           ...todayItems.map((item) => _buildReminderCard(item, themeColor, isToday: true)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
         ],
-        if (upcomingItems.isNotEmpty) ...[
-          _buildSectionHeader('Upcoming', Colors.grey.shade700),
-          ...upcomingItems.map((item) => _buildReminderCard(item, themeColor, isToday: false)),
+        if (weekItems.isNotEmpty) ...[
+          _buildSectionHeader('This Week', Colors.orange),
+          ...weekItems.map((item) => _buildReminderCard(item, themeColor, isToday: false)),
+          const SizedBox(height: 8),
+        ],
+        if (monthItems.isNotEmpty) ...[
+          _buildSectionHeader('This Month', Colors.blue),
+          ...monthItems.map((item) => _buildReminderCard(item, themeColor, isToday: false)),
+          const SizedBox(height: 8),
+        ],
+        if (laterItems.isNotEmpty) ...[
+          _buildSectionHeader('Upcoming', Colors.grey.shade600),
+          ...laterItems.map((item) => _buildReminderCard(item, themeColor, isToday: false)),
         ],
       ],
     );
@@ -131,7 +192,7 @@ class RemindersScreen extends ConsumerWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  type == 'birthdays' ? LucideIcons.cake : LucideIcons.heart,
+                  (type == 'birthdays' || type == 'birthday') ? LucideIcons.cake : LucideIcons.heart,
                   color: themeColor,
                 ),
               ),

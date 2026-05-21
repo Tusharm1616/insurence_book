@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../models/customer_model.dart';
-import '../providers/customer_provider.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/customers_provider.dart';
+import '../services/api_service.dart';
 import 'customer_options_screen.dart';
 
 class CreateCustomerScreen extends ConsumerStatefulWidget {
@@ -40,50 +40,62 @@ class _CreateCustomerScreenState extends ConsumerState<CreateCustomerScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_dob == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Date of Birth is required'), backgroundColor: Colors.red));
-      return;
-    }
 
-    final id = DateTime.now().millisecondsSinceEpoch;
     final name = _nameCtrl.text.trim();
     final mobile = _mobileCtrl.text.trim();
 
-    final username = name.toLowerCase().replaceAll(' ', '.') + id.toString().substring(8);
-    final password = 'Cust@${mobile.length >= 4 ? mobile.substring(mobile.length - 4) : '0000'}';
-
-    final newCustomer = Customer(
-      id: id,
-      fullName: name,
-      mobileNumber: mobile,
-      email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
-      address: _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
-      dob: _dob,
-      anniversaryDate: _anniversary,
-      businessJobType: _occupation,
-      generatedUsername: username,
-      generatedPassword: password,
-      isActive: true,
-      gender: 'Male', // defaults
-      maritalStatus: 'Single',
-    );
+    // Build the payload that matches /api/customers/ (new REST endpoint)
+    final payload = <String, dynamic>{
+      'full_name': name,
+      'phone': mobile,
+      if (_emailCtrl.text.trim().isNotEmpty) 'email': _emailCtrl.text.trim(),
+      if (_addressCtrl.text.trim().isNotEmpty) 'address': _addressCtrl.text.trim(),
+      if (_dob != null)
+        'dob': '${_dob!.year}-${_dob!.month.toString().padLeft(2, '0')}-${_dob!.day.toString().padLeft(2, '0')}',
+      if (_anniversary != null)
+        'anniversary_date':
+            '${_anniversary!.year}-${_anniversary!.month.toString().padLeft(2, '0')}-${_anniversary!.day.toString().padLeft(2, '0')}',
+      if (_occupation != null) 'business_job_type': _occupation,
+      'status': 'active',
+    };
 
     try {
-      final savedCustomer = await ref.read(customerProvider.notifier).addCustomer(newCustomer);
+      final response = await apiService.dio.post('/api/customers/', data: payload);
       if (!mounted) return;
-      
-      ref.invalidate(dashboardStatsProvider);
+
+      // Build a local Customer object from the response for the options screen
+      final data = response.data as Map<String, dynamic>;
+      final savedCustomer = Customer(
+        id: int.tryParse(data['id'].toString()) ?? 0,
+        fullName: data['full_name'] ?? name,
+        mobileNumber: data['phone'] ?? mobile,
+        email: data['email'],
+        address: data['address'],
+        dob: _dob,
+        anniversaryDate: _anniversary,
+        businessJobType: _occupation,
+        isActive: true,
+        gender: 'Male',
+        maritalStatus: 'Single',
+      );
+
+      // Directly fetch instead of invalidate — invalidate alone doesn't re-fetch
+      ref.read(dashboardStatsProvider.notifier).fetchDashboardStats();
       ref.invalidate(customersProvider);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(children: [Icon(Icons.check_circle, color: Colors.white), SizedBox(width: 8), Text('Customer saved successfully!')]),
+          content: const Row(children: [
+            Icon(Icons.check_circle, color: Colors.white),
+            SizedBox(width: 8),
+            Text('Customer saved successfully!'),
+          ]),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
-      // Redirect to Customer Options screen
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -92,7 +104,21 @@ class _CreateCustomerScreenState extends ConsumerState<CreateCustomerScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to save customer: $e'), backgroundColor: Colors.red));
+      // Show a clean, user-friendly error instead of the raw DioException
+      String msg = 'Failed to save customer. Please try again.';
+      try {
+        final dioErr = e as dynamic;
+        final detail = dioErr?.response?.data?['detail'];
+        if (detail != null) msg = detail.toString();
+      } catch (_) {}
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
     }
   }
 

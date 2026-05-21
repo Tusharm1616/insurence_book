@@ -21,29 +21,63 @@ class ReminderItem {
   });
 
   factory ReminderItem.fromJson(Map<String, dynamic> json) {
-    final days = json['days_remaining'] ?? 0;
+    final days = (json['days_remaining'] as num?)?.toInt() ?? 0;
     return ReminderItem(
-      customerId: json['customer_id'] ?? 0,
-      fullName: json['full_name'] ?? 'Unknown',
-      phone: json['phone'] ?? '',
+      customerId: (json['customer_id'] as num?)?.toInt() ?? 0,
+      fullName: json['full_name']?.toString() ?? 'Unknown',
+      phone: json['phone']?.toString() ?? '',
       eventDate: json['event_date']?.toString() ?? '',
       daysRemaining: days,
-      turningAge: json['turning_age'],
+      turningAge: (json['turning_age'] as num?)?.toInt(),
       isToday: json['is_today'] == true || days == 0,
     );
   }
 }
 
-final birthdaysProvider = FutureProvider<List<ReminderItem>>((ref) async {
-  final res = await apiService.dio.get('/api/reminders/birthdays');
-  // Backend returns a flat list of ReminderItem objects
-  final List data = res.data is List ? res.data : [];
-  return data.map((e) => ReminderItem.fromJson(e)).toList();
-});
+// ── Birthday Notifier ─────────────────────────────────────────────────────────
+class BirthdaysNotifier extends AsyncNotifier<List<ReminderItem>> {
+  @override
+  Future<List<ReminderItem>> build() => _fetch();
 
-final anniversariesProvider = FutureProvider<List<ReminderItem>>((ref) async {
-  final res = await apiService.dio.get('/api/reminders/anniversaries');
-  // Backend returns a flat list of ReminderItem objects
-  final List data = res.data is List ? res.data : [];
-  return data.map((e) => ReminderItem.fromJson(e)).toList();
-});
+  Future<List<ReminderItem>> _fetch() async {
+    final res = await apiService.dio.get('/api/reminders/birthdays');
+    final List data = res.data is List ? res.data as List : [];
+    return data
+        .map((e) => ReminderItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(_fetch);
+  }
+}
+
+final birthdaysProvider =
+    AsyncNotifierProvider<BirthdaysNotifier, List<ReminderItem>>(
+  BirthdaysNotifier.new,
+);
+
+// ── Anniversary Notifier ──────────────────────────────────────────────────────
+class AnniversariesNotifier extends AsyncNotifier<List<ReminderItem>> {
+  @override
+  Future<List<ReminderItem>> build() => _fetch();
+
+  Future<List<ReminderItem>> _fetch() async {
+    final res = await apiService.dio.get('/api/reminders/anniversaries');
+    final List data = res.data is List ? res.data as List : [];
+    return data
+        .map((e) => ReminderItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(_fetch);
+  }
+}
+
+final anniversariesProvider =
+    AsyncNotifierProvider<AnniversariesNotifier, List<ReminderItem>>(
+  AnniversariesNotifier.new,
+);

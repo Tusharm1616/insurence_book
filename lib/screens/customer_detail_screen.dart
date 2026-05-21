@@ -116,9 +116,10 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen> {
             
             // Customer details
             _buildInfoRow('Full Name', customer.fullName),
-            _buildInfoRow('Phone', customer.phone),
-            _buildInfoRow('Email', customer.email),
+            _buildInfoRow('Phone', customer.phone.isNotEmpty ? customer.phone : 'N/A'),
+            _buildInfoRow('Email', customer.email.isNotEmpty ? customer.email : 'N/A'),
             _buildInfoRow('Date of Birth', customer.dob.isNotEmpty ? _formatDate(customer.dob) : 'N/A'),
+            _buildInfoRow('Anniversary', customer.anniversaryDate.isNotEmpty ? _formatDate(customer.anniversaryDate) : 'N/A'),
             _buildInfoRow('Address', customer.address.isNotEmpty ? customer.address : 'N/A'),
             _buildInfoRow('City', customer.city.isNotEmpty ? customer.city : 'N/A'),
             _buildInfoRow('State', customer.state.isNotEmpty ? customer.state : 'N/A'),

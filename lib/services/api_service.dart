@@ -14,6 +14,9 @@ class ApiService {
     _dio.options.baseUrl = _baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 15);
     _dio.options.receiveTimeout = const Duration(seconds: 15);
+    // Follow redirects and preserve headers (fixes 307 redirect stripping Authorization)
+    _dio.options.followRedirects = true;
+    _dio.options.maxRedirects = 3;
 
     _dio.interceptors.add(
       InterceptorsWrapper(
@@ -59,7 +62,7 @@ class ApiService {
 
   Future<String?> getToken() async {
     final token = await _storage.read(key: 'access_token');
-    debugPrint('DEBUG: Reading token from storage: ${token != null ? token.substring(0, 10) + '...' : 'null'}');
+    debugPrint('DEBUG: Reading token from storage: ${token != null ? "${token.substring(0, 10)}..." : "null"}');
     return token;
   }
 

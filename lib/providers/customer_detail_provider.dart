@@ -1,12 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api_service.dart';
 
+// ── Data models ───────────────────────────────────────────────────────────────
+
 class CustomerDetail {
   final String id;
   final String fullName;
   final String phone;
   final String email;
   final String dob;
+  final String anniversaryDate;
   final String address;
   final String city;
   final String state;
@@ -21,6 +24,7 @@ class CustomerDetail {
     required this.phone,
     required this.email,
     required this.dob,
+    required this.anniversaryDate,
     required this.address,
     required this.city,
     required this.state,
@@ -39,7 +43,6 @@ class PolicyDetail {
   final String planName;
   final double sumInsured;
   final double premiumAmount;
-  final String paymentMode;
   final String startDate;
   final String endDate;
   final String status;
@@ -54,50 +57,68 @@ class PolicyDetail {
     required this.planName,
     required this.sumInsured,
     required this.premiumAmount,
-    required this.paymentMode,
     required this.startDate,
     required this.endDate,
     required this.status,
     required this.nomineeName,
     required this.nomineeRelation,
   });
+
+  factory PolicyDetail.fromJson(Map<String, dynamic> json) {
+    // Handle both field name variants from different endpoints
+    final startRaw = json['start_date'] ?? json['issue_date'] ?? '';
+    final endRaw   = json['end_date']   ?? json['expiry_date'] ?? '';
+    final sumRaw   = json['sum_insured'] ?? json['sum_assured'] ?? 0.0;
+
+    return PolicyDetail(
+      id:               json['id']?.toString() ?? '',
+      policyNumber:     json['policy_number']  ?? '',
+      policyType:       json['policy_type']    ?? '',
+      insurerName:      json['insurer_name']   ?? '',
+      planName:         json['plan_name']      ?? '',
+      sumInsured:       (sumRaw as num).toDouble(),
+      premiumAmount:    (json['premium_amount'] as num? ?? 0).toDouble(),
+      startDate:        startRaw.toString(),
+      endDate:          endRaw.toString(),
+      status:           json['status']          ?? '',
+      nomineeName:      json['nominee_name']    ?? '',
+      nomineeRelation:  json['nominee_relation'] ?? '',
+    );
+  }
 }
+
+// ── Loader ────────────────────────────────────────────────────────────────────
 
 Future<CustomerDetail> _loadCustomerDetail(String customerId) async {
   final response = await apiService.dio.get('/api/customers/$customerId');
-  final policies = (response.data['policies'] as List)
-      .map((policy) => PolicyDetail(
-            id: policy['id'] ?? '',
-            policyNumber: policy['policy_number'] ?? '',
-            policyType: policy['policy_type'] ?? '',
-            insurerName: policy['insurer_name'] ?? '',
-            planName: policy['plan_name'] ?? '',
-            sumInsured: (policy['sum_insured'] ?? 0.0).toDouble(),
-            premiumAmount: (policy['premium_amount'] ?? 0.0).toDouble(),
-            paymentMode: policy['payment_mode'] ?? '',
-            startDate: policy['start_date'] ?? '',
-            endDate: policy['end_date'] ?? '',
-            status: policy['status'] ?? '',
-            nomineeName: policy['nominee_name'] ?? '',
-            nomineeRelation: policy['nominee_relation'] ?? '',
-          ))
-      .toList();
+  final data = response.data as Map<String, dynamic>;
+
+  // policies may be null if the customer has no policies yet
+  final rawPolicies = data['policies'];
+  final List<PolicyDetail> policies = (rawPolicies is List)
+      ? rawPolicies
+          .map((p) => PolicyDetail.fromJson(p as Map<String, dynamic>))
+          .toList()
+      : [];
 
   return CustomerDetail(
-    id: response.data['id'] ?? '',
-    fullName: response.data['full_name'] ?? '',
-    phone: response.data['phone'] ?? '',
-    email: response.data['email'] ?? '',
-    dob: response.data['dob'] ?? '',
-    address: response.data['address'] ?? '',
-    city: response.data['city'] ?? '',
-    state: response.data['state'] ?? '',
-    pincode: response.data['pincode'] ?? '',
-    status: response.data['status'] ?? '',
-    createdAt: response.data['created_at'] ?? '',
-    policies: policies,
+    id:               data['id']?.toString()    ?? '',
+    fullName:         data['full_name']          ?? '',
+    phone:            data['phone']              ?? '',
+    email:            data['email']              ?? '',
+    dob:              data['dob']                ?? '',
+    anniversaryDate:  data['anniversary_date']   ?? '',
+    address:          data['address']            ?? '',
+    city:             data['city']               ?? '',
+    state:            data['state']              ?? '',
+    pincode:          data['pincode']            ?? '',
+    status:           data['status']             ?? '',
+    createdAt:        data['created_at']         ?? '',
+    policies:         policies,
   );
 }
+
+// ── Provider ──────────────────────────────────────────────────────────────────
 
 final customerDetailProvider =
     FutureProvider.family<CustomerDetail, String>((ref, customerId) async {

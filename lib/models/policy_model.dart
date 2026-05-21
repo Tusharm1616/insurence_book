@@ -132,26 +132,35 @@ class Policy {
         extraDataRaw[k.toString()] = v?.toString() ?? '';
       });
     }
-    // Also pull nominee from top-level fields if present
     final nomineeName = json['nominee_name'] as String?;
     final nomineeRelation = json['nominee_relation'] as String?;
 
+    // Handle both old (issue_date/expiry_date) and new (start_date/end_date) field names
+    final startRaw = json['issue_date'] ?? json['start_date'] ?? json['created_at'];
+    final endRaw   = json['expiry_date'] ?? json['end_date'];
+
+    // Fallback dates so we never crash on missing fields
+    final startDate  = startRaw != null ? DateTime.tryParse(startRaw.toString()) ?? DateTime.now() : DateTime.now();
+    final expiryDate = endRaw   != null ? DateTime.tryParse(endRaw.toString())   ?? DateTime.now().add(const Duration(days: 365)) : DateTime.now().add(const Duration(days: 365));
+
     return Policy(
-      id: json['id'] as int,
-      customerId: json['customer_id'] as int?,
+      id: json['id'] is int ? json['id'] : int.tryParse(json['id'].toString()) ?? 0,
+      customerId: json['customer_id'] is int
+          ? json['customer_id']
+          : int.tryParse(json['customer_id']?.toString() ?? '') ,
       customerName: json['customer_name'] as String?,
       policyType: json['policy_type'] ?? json['insurance_type'] ?? 'Other',
       policyNumber: (json['policy_number'] as String? ?? '').trim(),
       insuranceCompany: json['insurer_name'] as String? ?? 'Unknown',
-      sumInsured: (json['sum_assured'] as num?)?.toDouble() ?? 0.0,
+      sumInsured: (json['sum_assured'] ?? json['sum_insured'] as num?)?.toDouble() ?? 0.0,
       premium: (json['premium_amount'] as num?)?.toDouble() ?? 0.0,
-      startDate: DateTime.parse(json['issue_date'] as String),
-      expiryDate: DateTime.parse(json['expiry_date'] as String),
+      startDate: startDate,
+      expiryDate: expiryDate,
       maturityDate: json['maturity_date'] != null
-          ? DateTime.tryParse(json['maturity_date'] as String)
+          ? DateTime.tryParse(json['maturity_date'].toString())
           : null,
       premiumDueDate: json['premium_due_date'] != null
-          ? DateTime.tryParse(json['premium_due_date'] as String)
+          ? DateTime.tryParse(json['premium_due_date'].toString())
           : null,
       status: (json['status'] as String? ?? 'active').toLowerCase(),
       computedStatus: json['computed_status'] as String?,
@@ -179,13 +188,16 @@ class Policy {
 
   Map<String, dynamic> toJson() {
     return {
-      'customer_id': customerId,
+      if (customerId != null) 'customer_id': customerId,
       'policy_type': mappedPolicyType,
-      'policy_number': policyNumber,
+      'policy_number': policyNumber.isNotEmpty ? policyNumber : null,
       'insurer_name': insuranceCompany,
-      'plan_name': extraData['planName'] ?? 'Standard Plan',
+      'plan_name': extraData['planName'] ?? extraData['policyType'] ?? mappedPolicyType,
       'sum_assured': sumInsured,
       'premium_amount': premium,
+      // Send both field name variants so either endpoint accepts it
+      'start_date': startDate.toIso8601String().split('T').first,
+      'end_date': expiryDate.toIso8601String().split('T').first,
       'issue_date': startDate.toIso8601String().split('T').first,
       'expiry_date': expiryDate.toIso8601String().split('T').first,
       if (maturityDate != null)
@@ -193,8 +205,11 @@ class Policy {
       if (premiumDueDate != null)
         'premium_due_date': premiumDueDate!.toIso8601String().split('T').first,
       'status': status.toLowerCase(),
-      if (nomineeName != null) 'nominee_name': nomineeName,
-      if (nomineeRelation != null) 'nominee_relation': nomineeRelation,
+      if (nomineeName != null && nomineeName!.isNotEmpty)
+        'nominee_name': nomineeName,
+      if (nomineeRelation != null && nomineeRelation!.isNotEmpty)
+        'nominee_relation': nomineeRelation,
+      if (extraData['notes'] != null) 'notes': extraData['notes'],
     };
   }
 }

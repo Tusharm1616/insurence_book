@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../core/theme.dart';
 import '../providers/customers_provider.dart';
 import '../widgets/shimmer_widget.dart';
-import 'customer_detail_screen.dart';
 
 class NewCustomerListScreen extends ConsumerStatefulWidget {
   final String filter;
@@ -32,9 +31,8 @@ class _NewCustomerListScreenState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(customersProvider.notifier)
-        ..setFilter(widget.filter)
-        ..fetchCustomers(refresh: true);
+      // setFilter already calls fetchCustomers internally — don't call it twice
+      ref.read(customersProvider.notifier).setFilter(widget.filter);
     });
     _scrollController.addListener(_onScroll);
   }
@@ -180,12 +178,10 @@ class _NewCustomerListScreenState
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => Navigator.push(
+        onTap: () => Navigator.pushNamed(
           context,
-          MaterialPageRoute(
-            builder: (_) =>
-                CustomerDetailScreen(customerId: customer.id),
-          ),
+          '/customer_detail',
+          arguments: {'customerId': customer.id},
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -197,8 +193,7 @@ class _NewCustomerListScreenState
                 children: [
                   CircleAvatar(
                     radius: 24,
-                    backgroundColor:
-                        AppColors.info.withValues(alpha: 0.15),
+                    backgroundColor: AppColors.info.withValues(alpha: 0.15),
                     child: Text(
                       initials,
                       style: TextStyle(
@@ -214,13 +209,21 @@ class _NewCustomerListScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          customer.fullName,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1C1C1C),
-                            fontFamily: 'Poppins',
+                        // Tappable name
+                        GestureDetector(
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/customer_detail',
+                            arguments: {'customerId': customer.id},
+                          ),
+                          child: Text(
+                            customer.fullName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1C1C1C),
+                              fontFamily: 'Poppins',
+                            ),
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -236,6 +239,7 @@ class _NewCustomerListScreenState
                         if (customer.email.isNotEmpty)
                           Text(
                             customer.email,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 13,
                               color: Color(0xFF6B7280),
@@ -254,8 +258,7 @@ class _NewCustomerListScreenState
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right,
-                      color: Colors.grey, size: 20),
+                  const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
                 ],
               ),
               const SizedBox(height: 10),
