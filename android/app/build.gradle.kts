@@ -33,9 +33,11 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // Signing with the debug keys for now
             signingConfig = signingConfigs.getByName("debug")
+            // Disable minification to avoid R8 issues with Flutter Play Core classes
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
