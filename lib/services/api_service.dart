@@ -12,8 +12,9 @@ class ApiService {
 
   ApiService() {
     _dio.options.baseUrl = _baseUrl;
-    _dio.options.connectTimeout = const Duration(seconds: 15);
-    _dio.options.receiveTimeout = const Duration(seconds: 15);
+    _dio.options.connectTimeout = const Duration(seconds: 30);
+    _dio.options.receiveTimeout = const Duration(seconds: 30);
+    _dio.options.sendTimeout = const Duration(seconds: 30);
     // Follow redirects and preserve headers (fixes 307 redirect stripping Authorization)
     _dio.options.followRedirects = true;
     _dio.options.maxRedirects = 3;

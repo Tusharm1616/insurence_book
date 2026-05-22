@@ -21,10 +21,32 @@ class AuthState {
   }
 }
 
+// ── Helper: extract a clean error message from DioException ──────────────────
+String _dioErrorMessage(DioException e, String fallback) {
+  if (e.response != null) {
+    final data = e.response?.data;
+    if (data is Map<String, dynamic> && data.containsKey('detail')) {
+      return data['detail'].toString();
+    }
+    if (data is String && data.isNotEmpty) return data;
+    return '$fallback (${e.response?.statusCode})';
+  }
+  // No response — network-level error
+  switch (e.type) {
+    case DioExceptionType.connectionTimeout:
+    case DioExceptionType.sendTimeout:
+    case DioExceptionType.receiveTimeout:
+      return 'Connection timed out. Please check your internet and try again.';
+    case DioExceptionType.connectionError:
+      return 'No internet connection. Please check your network.';
+    default:
+      return 'Network error. Please try again.';
+  }
+}
+
 class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
-    // Attempt to initialize on build
     Future.microtask(() => initialize());
     return AuthState();
   }
@@ -46,7 +68,6 @@ class AuthNotifier extends Notifier<AuthState> {
       );
       state = state.copyWith(user: user, isLoading: false);
     } catch (e) {
-      // If profile fetch fails, token might be invalid
       await apiService.clearToken();
       state = AuthState();
     }
@@ -59,38 +80,24 @@ class AuthNotifier extends Notifier<AuthState> {
         'email': email,
         'password': password,
       });
-      
+
       final token = response.data['token'];
       await apiService.saveToken(token);
-      
+
       final agentData = response.data['agent'];
       final user = UserProfile(
-        id: agentData['id'], 
-        username: agentData['email'], 
-        fullName: agentData['name'], 
-        role: 'agent'
+        id: agentData['id'],
+        username: agentData['email'],
+        fullName: agentData['name'],
+        role: 'agent',
       );
-      
+
       state = state.copyWith(user: user, isLoading: false);
     } catch (e) {
-      String errorMessage = 'Login failed';
-      if (e is DioException) {
-        if (e.response != null) {
-          final data = e.response?.data;
-          if (data is Map<String, dynamic> && data.containsKey('detail')) {
-            errorMessage = data['detail'].toString();
-          } else if (data is String) {
-            errorMessage = data;
-          } else {
-            errorMessage = 'Login failed (Server Error: ${e.response?.statusCode})';
-          }
-        } else {
-          errorMessage = 'Network Error: Make sure backend is running';
-        }
-      } else {
-        errorMessage = e.toString();
-      }
-      state = state.copyWith(isLoading: false, error: errorMessage);
+      final msg = e is DioException
+          ? _dioErrorMessage(e, 'Login failed')
+          : e.toString();
+      state = state.copyWith(isLoading: false, error: msg);
     }
   }
 
@@ -113,24 +120,10 @@ class AuthNotifier extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
-      String errorMessage = 'Registration failed';
-      if (e is DioException) {
-        if (e.response != null) {
-          final data = e.response?.data;
-          if (data is Map<String, dynamic> && data.containsKey('detail')) {
-            errorMessage = data['detail'].toString();
-          } else if (data is String) {
-            errorMessage = data;
-          } else {
-            errorMessage = 'Registration failed (Server Error: ${e.response?.statusCode})';
-          }
-        } else {
-          errorMessage = 'Network Error: Make sure backend is running';
-        }
-      } else {
-        errorMessage = e.toString();
-      }
-      state = state.copyWith(isLoading: false, error: errorMessage);
+      final msg = e is DioException
+          ? _dioErrorMessage(e, 'Registration failed')
+          : e.toString();
+      state = state.copyWith(isLoading: false, error: msg);
       return false;
     }
   }
