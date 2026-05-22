@@ -576,13 +576,13 @@ from datetime import datetime
 
 @app.get("/")
 @limiter.limit("100/minute")
-def read_root(request):
+def read_root(request: Request):
     return {"message": "Welcome to InsureBook API", "version": "2.3.0", "docs": "/docs", "health": "/health"}
 
 
 @app.get("/health")
 @limiter.limit("200/minute")
-async def health_check(request):
+async def health_check(request: Request):
     """Enhanced health check — also verifies DB connectivity."""
     from sqlalchemy import text as _t
     db_ok = False
@@ -603,7 +603,7 @@ async def health_check(request):
 
 @app.get("/api/version")
 @limiter.limit("100/minute")
-def get_version(request):
+def get_version(request: Request):
     return {
         "api_version": "2.3.0",
         "min_app_version": "1.0.0",
