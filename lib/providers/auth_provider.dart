@@ -36,9 +36,11 @@ String _dioErrorMessage(DioException e, String fallback) {
     case DioExceptionType.connectionTimeout:
     case DioExceptionType.sendTimeout:
     case DioExceptionType.receiveTimeout:
-      return 'Connection timed out. Please check your internet and try again.';
+      return 'Request timed out. The server may be starting up — please try again in a moment.';
     case DioExceptionType.connectionError:
-      return 'No internet connection. Please check your network.';
+      // This covers both "no internet" AND "server unreachable"
+      // Don't say "no internet" since the server might just be cold-starting
+      return 'Could not connect to server. Please check your internet and try again.';
     default:
       return 'Network error. Please try again.';
   }
@@ -76,12 +78,22 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<void> login(String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final response = await apiService.dio.post('/api/auth/login', data: {
-        'email': email,
-        'password': password,
-      });
+      // Retry once on connection error (Railway cold start can take 20-30s)
+      Response? response;
+      for (int attempt = 1; attempt <= 2; attempt++) {
+        try {
+          response = await apiService.dio.post('/api/auth/login', data: {
+            'email': email,
+            'password': password,
+          });
+          break;
+        } on DioException catch (e) {
+          if (attempt == 2 || e.response != null) rethrow;
+          await Future.delayed(const Duration(seconds: 3));
+        }
+      }
 
-      final token = response.data['token'];
+      final token = response!.data['token'];
       await apiService.saveToken(token);
 
       final agentData = response.data['agent'];
@@ -110,13 +122,23 @@ class AuthNotifier extends Notifier<AuthState> {
   }) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await apiService.dio.post('/api/auth/register', data: {
-        'name': name,
-        'email': email,
-        'phone': phone,
-        'license_no': licenseNo,
-        'password': password,
-      });
+      // Retry once on connection error (Railway cold start)
+      for (int attempt = 1; attempt <= 2; attempt++) {
+        try {
+          await apiService.dio.post('/api/auth/register', data: {
+            'name': name,
+            'email': email,
+            'phone': phone,
+            'license_no': licenseNo,
+            'password': password,
+          });
+          break; // success — exit retry loop
+        } on DioException catch (e) {
+          if (attempt == 2 || e.response != null) rethrow;
+          // First attempt failed with no response (cold start) — wait and retry
+          await Future.delayed(const Duration(seconds: 3));
+        }
+      }
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
