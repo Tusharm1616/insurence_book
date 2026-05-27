@@ -12,11 +12,21 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL is not set")
 
-# ✅ FIX for asyncpg
-DATABASE_URL = DATABASE_URL.replace(
-    "postgresql://",
-    "postgresql+asyncpg://"
-)
+# Fix URL scheme for asyncpg — handles postgresql://, postgres://, and already-fixed URLs
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+# If already postgresql+asyncpg:// leave it as-is
+
+# Neon requires SSL — add ssl=require if not already present
+connect_args = {}
+if "neon.tech" in DATABASE_URL or "neondb" in DATABASE_URL.lower():
+    connect_args = {"ssl": "require"}
+elif "sslmode=require" in DATABASE_URL:
+    # Remove sslmode from URL (asyncpg doesn't support it as query param)
+    DATABASE_URL = DATABASE_URL.replace("?sslmode=require", "").replace("&sslmode=require", "")
+    connect_args = {"ssl": "require"}
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,10 +35,11 @@ logger.info(f"Using database: {DATABASE_URL.split('@')[1] if '@' in DATABASE_URL
 # Enhanced engine configuration with connection pooling
 engine = create_async_engine(
     DATABASE_URL,
-    pool_size=20,
-    max_overflow=30,
+    connect_args=connect_args,
+    pool_size=10,
+    max_overflow=20,
     pool_pre_ping=True,
-    pool_recycle=3600,
+    pool_recycle=1800,
     echo=os.getenv("DEBUG", "false").lower() == "true"
 )
 
