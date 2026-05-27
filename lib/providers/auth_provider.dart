@@ -29,6 +29,9 @@ String _dioErrorMessage(DioException e, String fallback) {
       return data['detail'].toString();
     }
     if (data is String && data.isNotEmpty) return data;
+    // 404 = user not found, 401 = wrong password — both mean wrong credentials
+    final status = e.response?.statusCode;
+    if (status == 404 || status == 401) return 'Invalid email or password.';
     return '$fallback (${e.response?.statusCode})';
   }
   // No response — network-level error
@@ -38,8 +41,6 @@ String _dioErrorMessage(DioException e, String fallback) {
     case DioExceptionType.receiveTimeout:
       return 'Request timed out. The server may be starting up — please try again in a moment.';
     case DioExceptionType.connectionError:
-      // This covers both "no internet" AND "server unreachable"
-      // Don't say "no internet" since the server might just be cold-starting
       return 'Could not connect to server. Please check your internet and try again.';
     default:
       return 'Network error. Please try again.';
