@@ -13,11 +13,12 @@ class Customer(Base):
     phone = Column(String(15))
     email = Column(String(100))
     dob = Column(Date)
-    anniversary_date = Column(Date)          # ← was missing
+    anniversary_date = Column(Date)
     address = Column(Text)
     city = Column(String(80))
     state = Column(String(80))
     pincode = Column(String(10))
+    ref_by = Column(String(150), nullable=True)
     status = Column(String(20), default='active')  # 'active' | 'inactive'
     
     # Timestamps

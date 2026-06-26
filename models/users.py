@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Enum, ForeignKey, Integer
+from sqlalchemy import Column, String, Enum, ForeignKey, Integer, Text
 from sqlalchemy.orm import relationship
 import enum
 from database import Base
@@ -18,6 +18,14 @@ class User(Base):
     role = Column(String, default=UserRole.AGENT)
     phone = Column(String, nullable=True)
     license_no = Column(String, nullable=True)
+
+    # Bank details
+    upi_id = Column(String, nullable=True)
+    bank_name = Column(String, nullable=True)
+    account_number = Column(String, nullable=True)
+    ifsc_code = Column(String, nullable=True)
+    branch_name = Column(String, nullable=True)
+    qr_code_url = Column(Text, nullable=True)
     
     # Relationships
     managed_customers = relationship("Customer", back_populates="agent", foreign_keys="[Customer.agent_id]")

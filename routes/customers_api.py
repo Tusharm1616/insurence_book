@@ -191,6 +191,7 @@ async def get_customer_detail(
             "city": customer.city,
             "state": customer.state,
             "pincode": customer.pincode,
+            "ref_by": customer.ref_by or "",
             "status": customer.status,
             "created_at": _safe_date(customer, "created_at"),
             "policies": policies_data,

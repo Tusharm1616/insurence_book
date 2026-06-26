@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import uvicorn
@@ -17,10 +18,31 @@ import time
 from database import engine, Base, get_db
 from utils.auth import verify_password, get_password_hash, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user
 from models.users import User, UserRole
+from models.leads import Lead  # noqa: F401 - needed for create_all
 
 from fastapi.middleware.cors import CORSMiddleware
-from routes import auth, customers, policies, dashboard, life_insurance, reminders, motor, two_wheeler, add_policy, vehicle, terms, vehicle_documents, customers_api, policies_api
+from routes import auth
+from routes import customers
+from routes import policies
+from routes import dashboard
+from routes import life_insurance
+from routes import reminders
+from routes import motor
+from routes import two_wheeler
+from routes import add_policy
+from routes import vehicle
+from routes import terms
+from routes import vehicle_documents
+from routes import customers_api
+from routes import policies_api
+from routes import bank_details
+from routes import policies_v2
+from routes import customer_documents
+from routes import policy_pdf
+from routes import leads
 from routes import notifications as notifications_router
+from routes import search
+from routes import reports
 
 # Rate limiting
 limiter = Limiter(key_func=get_remote_address)
@@ -107,6 +129,94 @@ async def init_db():
                     "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR"),
                 ("users add license_no",
                     "ALTER TABLE users ADD COLUMN IF NOT EXISTS license_no VARCHAR"),
+
+                # ── USERS BANK DETAILS ──────────────────────────────────────────
+                ("users add upi_id",
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS upi_id VARCHAR(100)"),
+                ("users add bank_name",
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100)"),
+                ("users add account_number",
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS account_number VARCHAR(30)"),
+                ("users add ifsc_code",
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS ifsc_code VARCHAR(11)"),
+                ("users add branch_name",
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_name VARCHAR(100)"),
+                ("users add qr_code_url",
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS qr_code_url TEXT"),
+
+                # ── CUSTOMERS — extra columns ────────────────────────────────
+                ("customers add ref_by",
+                    "ALTER TABLE customers ADD COLUMN IF NOT EXISTS ref_by VARCHAR(150)"),
+
+                # ── NEW TABLES (UUID-based) ──────────────────────────────────
+                ("enable uuid-ossp",
+                    'CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'),
+
+                ("create policies_v2", """
+                    CREATE TABLE IF NOT EXISTS policies_v2 (
+                        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                        customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+                        agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                        policy_number VARCHAR(60) UNIQUE NOT NULL,
+                        insurance_company VARCHAR(150),
+                        insurance_type VARCHAR(50) NOT NULL DEFAULT 'Other',
+                        start_date DATE,
+                        end_date DATE,
+                        total_amount NUMERIC(10, 2),
+                        discount_amount NUMERIC(10, 2) DEFAULT 0,
+                        final_amount NUMERIC(10, 2),
+                        payment_mode VARCHAR(20),
+                        payment_date DATE,
+                        inspection_date DATE,
+                        inspection_status VARCHAR(20) DEFAULT 'NA',
+                        claim_status VARCHAR(20) DEFAULT 'No Claim',
+                        claim_amount NUMERIC(10, 2) DEFAULT 0,
+                        claim_notes TEXT,
+                        ref_by VARCHAR(150),
+                        commission_percent NUMERIC(5, 2) DEFAULT 0,
+                        commission_amount NUMERIC(10, 2) DEFAULT 0,
+                        policy_pdf_url VARCHAR(500),
+                        last_year_policy_pdf_url VARCHAR(500),
+                        is_active BOOLEAN DEFAULT TRUE,
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP DEFAULT NOW()
+                    )
+                """),
+
+                ("create customer_documents", """
+                    CREATE TABLE IF NOT EXISTS customer_documents (
+                        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                        customer_id INTEGER REFERENCES customers(id) ON DELETE CASCADE,
+                        agent_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                        document_type VARCHAR(50) NOT NULL DEFAULT 'Other',
+                        document_name VARCHAR(255) NOT NULL,
+                        file_url VARCHAR(500) NOT NULL,
+                        file_size INTEGER,
+                        uploaded_at TIMESTAMP DEFAULT NOW()
+                    )
+                """),
+
+                # ── INDEXES for new tables ───────────────────────────────────
+                ("idx policies_v2 agent",
+                    "CREATE INDEX IF NOT EXISTS ix_policies_v2_agent_id ON policies_v2(agent_id)"),
+                ("idx policies_v2 customer",
+                    "CREATE INDEX IF NOT EXISTS ix_policies_v2_customer_id ON policies_v2(customer_id)"),
+                ("idx policies_v2 type",
+                    "CREATE INDEX IF NOT EXISTS ix_policies_v2_insurance_type ON policies_v2(insurance_type)"),
+                ("idx policies_v2 end_date",
+                    "CREATE INDEX IF NOT EXISTS ix_policies_v2_end_date ON policies_v2(end_date)"),
+                ("idx policies_v2 policy_number",
+                    "CREATE INDEX IF NOT EXISTS ix_policies_v2_policy_number ON policies_v2(policy_number)"),
+                ("idx customer_documents customer",
+                    "CREATE INDEX IF NOT EXISTS ix_customer_documents_customer_id ON customer_documents(customer_id)"),
+                ("idx customer_documents agent",
+                    "CREATE INDEX IF NOT EXISTS ix_customer_documents_agent_id ON customer_documents(agent_id)"),
+                ("idx customer_documents type",
+                    "CREATE INDEX IF NOT EXISTS ix_customer_documents_type ON customer_documents(document_type)"),
+
+                # ── CUSTOMER DOCUMENTS — notes column ────────────────────────
+                ("customer_documents add notes",
+                    "ALTER TABLE customer_documents ADD COLUMN IF NOT EXISTS notes VARCHAR(500) DEFAULT ''"),
 
                 # ── POLICIES ─────────────────────────────────────────────────
                 ("policies insurance_type->policy_type", """
@@ -409,6 +519,35 @@ async def init_db():
                     "CREATE INDEX IF NOT EXISTS ix_vehicle_docs_puc_expiry ON vehicle_documents(puc_expiry)"),
                 ("idx motor_quote_history agent",
                     "CREATE INDEX IF NOT EXISTS ix_motor_quote_history_agent_id ON motor_quote_history(agent_id)"),
+
+                # ── LEADS ────────────────────────────────────────────────────
+                ("create leads", """
+                    CREATE TABLE IF NOT EXISTS leads (
+                        id SERIAL PRIMARY KEY,
+                        agent_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        name VARCHAR(150) NOT NULL,
+                        phone VARCHAR(15),
+                        email VARCHAR(100),
+                        insurance_type VARCHAR(80),
+                        source VARCHAR(50) DEFAULT 'Walk-in',
+                        status VARCHAR(30) DEFAULT 'New',
+                        notes TEXT,
+                        follow_up_date TIMESTAMP,
+                        converted_customer_id INTEGER REFERENCES customers(id),
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP DEFAULT NOW()
+                    )
+                """),
+                ("idx leads agent_id",
+                    "CREATE INDEX IF NOT EXISTS ix_leads_agent_id ON leads(agent_id)"),
+                ("idx leads status",
+                    "CREATE INDEX IF NOT EXISTS ix_leads_status ON leads(status)"),
+                ("idx leads follow_up_date",
+                    "CREATE INDEX IF NOT EXISTS ix_leads_follow_up_date ON leads(follow_up_date)"),
+                ("leads add follow_up_date",
+                    "ALTER TABLE leads ADD COLUMN IF NOT EXISTS follow_up_date TIMESTAMP"),
+                ("leads add converted_customer_id",
+                    "ALTER TABLE leads ADD COLUMN IF NOT EXISTS converted_customer_id INTEGER REFERENCES customers(id)"),
             ]
 
             # 3. Run every migration in its own isolated connection
@@ -457,7 +596,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down InsureBook API...")
 
 
-app = FastAPI(title="InsureBook API", lifespan=lifespan)
+app = FastAPI(title="InsureBook API", lifespan=lifespan, redirect_slashes=False)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -518,6 +657,17 @@ app.include_router(two_wheeler.router)
 app.include_router(add_policy.router)
 app.include_router(vehicle.router)
 app.include_router(terms.router)
+app.include_router(bank_details.router)
+app.include_router(policies_v2.router)
+app.include_router(reports.router)
+app.include_router(search.router)
+app.include_router(policy_pdf.router)
+app.include_router(leads.router)
+
+# ── Mount uploads directory for locally stored PDF files ──────────────────────
+_uploads_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+os.makedirs(_uploads_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
 
 
 # ── Admin: clear agent's own data ─────────────────────────────────────────────
@@ -570,6 +720,7 @@ app.include_router(vehicle_documents.router)
 app.include_router(customers_api.router)
 app.include_router(policies_api.router)
 app.include_router(notifications_router.router)
+app.include_router(customer_documents.router)
 
 from datetime import datetime
 

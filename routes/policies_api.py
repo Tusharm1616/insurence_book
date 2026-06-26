@@ -205,7 +205,7 @@ async def create_policy(
         pt = (policy_type or '').lower()
         prefix = next((v for k, v in prefix_map.items() if k in pt), 'PL')
         from datetime import datetime
-        return f"{prefix}{datetime.now().strftime('%Y%m%d')}{_uuid.uuid4().hex[:6].upper()}"
+        return f"{prefix}{datetime.now().strftime('%Y%m%d%H%M%S')}{_uuid.uuid4().hex[:8].upper()}"
 
     try:
         agent_id = current_user.id
@@ -228,9 +228,29 @@ async def create_policy(
 
         # Auto-generate policy number if blank/null
         raw_pno = policy_data.get("policy_number")
-        policy_number = (raw_pno or "").strip() or _auto_policy_number(
-            policy_data.get("policy_type", "PL")
-        )
+        policy_number = (raw_pno or "").strip()
+
+        if policy_number:
+            # Check if user-provided policy_number already exists
+            existing = await db.execute(
+                select(Policy).where(Policy.policy_number == policy_number)
+            )
+            if existing.scalars().first():
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Policy number '{policy_number}' already exists. Please use a unique policy number."
+                )
+        else:
+            # Auto-generate a unique policy number with retry
+            policy_type_val = policy_data.get("policy_type", "PL")
+            for _attempt in range(5):
+                policy_number = _auto_policy_number(policy_type_val)
+                existing = await db.execute(
+                    select(Policy).where(Policy.policy_number == policy_number)
+                )
+                if not existing.scalars().first():
+                    break
+            # After 5 attempts with uuid+timestamp, collision is virtually impossible
 
         # Ensure policy_type is never null
         policy_type = (policy_data.get("policy_type") or "Other").strip()
@@ -277,6 +297,8 @@ async def create_policy(
             "status": new_policy.status,
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
         raise HTTPException(
