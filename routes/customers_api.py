@@ -167,17 +167,19 @@ async def get_customer_detail(
 
         policies_data = [{
             "id": str(p.id),
-            "policy_number": p.policy_number,
-            "policy_type": p.policy_type,
-            "insurer_name": p.insurer_name,
-            "plan_name": p.plan_name,
+            "policy_number": p.policy_number or "",
+            "policy_type": p.policy_type or "",
+            "insurer_name": p.insurer_name or "",
+            "plan_name": p.plan_name or "",
             "sum_insured": float(p.sum_assured) if p.sum_assured else 0.0,
             "premium_amount": float(p.premium_amount) if p.premium_amount else 0.0,
-            "start_date": p.start_date.isoformat() if p.start_date else None,
-            "end_date": p.end_date.isoformat() if p.end_date else None,
-            "status": p.status,
-            "nominee_name": p.nominee_name,
-            "nominee_relation": p.nominee_relation,
+            "start_date": (p.start_date or p.issue_date).isoformat() if (p.start_date or p.issue_date) else None,
+            "end_date": (p.end_date or p.expiry_date).isoformat() if (p.end_date or p.expiry_date) else None,
+            "issue_date": p.issue_date.isoformat() if p.issue_date else None,
+            "expiry_date": p.expiry_date.isoformat() if p.expiry_date else None,
+            "status": p.status or "active",
+            "nominee_name": p.nominee_name or "",
+            "nominee_relation": p.nominee_relation or "",
         } for p in policies]
 
         return {

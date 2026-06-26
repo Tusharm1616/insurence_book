@@ -419,3 +419,45 @@ async def get_reports_income(
             status_code=500,
             detail=f"Failed to fetch income report: {str(e)}"
         )
+
+
+@router.get("/life-insurance")
+async def get_life_insurance_report(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Returns life insurance report summary: total policies, total premium,
+    active/expired counts, and claims filed.
+    """
+    try:
+        agent_id = current_user.id
+
+        query = text("""
+            SELECT
+                COUNT(*) as total_policies,
+                COALESCE(SUM(premium_amount), 0) as total_premium,
+                COUNT(*) FILTER (WHERE LOWER(status) IN ('active', 'live')) as active_policies,
+                COUNT(*) FILTER (WHERE LOWER(status) IN ('expired', 'lapsed', 'matured')) as expired_policies,
+                0 as claims_filed
+            FROM policies
+            WHERE agent_id = :agent_id
+        """)
+
+        result = await db.execute(query, {"agent_id": agent_id})
+        row = result.fetchone()
+
+        return {
+            "total_policies": row[0] if row else 0,
+            "total_premium": float(row[1]) if row and row[1] else 0.0,
+            "active_policies": row[2] if row else 0,
+            "expired_policies": row[3] if row else 0,
+            "claims_filed": row[4] if row else 0,
+        }
+
+    except Exception as e:
+        logger.error(f"Life insurance report error: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch life insurance report: {str(e)}"
+        )

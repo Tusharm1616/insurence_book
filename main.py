@@ -143,6 +143,8 @@ async def init_db():
                     "ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_name VARCHAR(100)"),
                 ("users add qr_code_url",
                     "ALTER TABLE users ADD COLUMN IF NOT EXISTS qr_code_url TEXT"),
+                ("users fix qr_code_url type",
+                    "ALTER TABLE users ALTER COLUMN qr_code_url TYPE TEXT"),
 
                 # ── CUSTOMERS — extra columns ────────────────────────────────
                 ("customers add ref_by",

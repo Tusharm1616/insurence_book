@@ -44,18 +44,15 @@ async def get_life_insurance_report(
                 COALESCE(SUM(premium_amount), 0) as total_premium,
                 COUNT(*) FILTER (
                     WHERE LOWER(status) IN ('active', 'live')
-                    AND COALESCE(end_date, expiry_date) >= CURRENT_DATE
                 ) as active_policies,
                 COUNT(*) FILTER (
-                    WHERE LOWER(status) IN ('expired', 'lapsed')
-                    OR COALESCE(end_date, expiry_date) < CURRENT_DATE
+                    WHERE LOWER(status) NOT IN ('active', 'live')
                 ) as expired_policies,
                 COUNT(*) FILTER (
                     WHERE LOWER(status) = 'claimed'
                 ) as claims_filed
             FROM policies
             WHERE agent_id = :agent_id
-              AND LOWER(policy_type) IN ('life', 'term', 'endowment', 'ulip')
         """)
 
         result = await db.execute(query, {"agent_id": agent_id})
