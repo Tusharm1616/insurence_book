@@ -1,5 +1,8 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'core/theme.dart';
 import 'screens/create_customer_screen.dart';
 import 'screens/auth/splash_screen.dart';
@@ -18,6 +21,7 @@ import 'screens/add_policy_type_screen.dart';
 import 'screens/customer_policy_screen.dart';
 import 'screens/add_lead_screen.dart';
 import 'screens/lead_list_screen.dart';
+import 'screens/lead_detail_screen.dart';
 import 'providers/lead_provider.dart';
 
 import 'screens/bank_details_screen.dart';
@@ -31,8 +35,12 @@ import 'services/notification_service.dart';
 import 'screens/vehicle_docs/vehicle_docs_screen.dart';
 import 'screens/motor_calculator_screen.dart';
 import 'screens/terms_conditions_screen.dart';
+import 'screens/pdf_intake_screen.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+/// Holds a pending shared PDF file path (set before app finishes loading)
+SharedMediaFile? pendingSharedPdf;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,6 +49,18 @@ void main() async {
   await notificationService.init();
   await notificationService.scheduleDailyReminder();
 
+  // Check for shared PDF files on cold start
+  final initialMedia = await ReceiveSharingIntent.instance.getInitialMedia();
+  if (initialMedia.isNotEmpty) {
+    final pdfFile = initialMedia.firstWhere(
+      (f) => f.path.toLowerCase().endsWith('.pdf'),
+      orElse: () => SharedMediaFile(path: '', type: SharedMediaType.file, mimeType: ''),
+    );
+    if (pdfFile.path.isNotEmpty) {
+      pendingSharedPdf = pdfFile;
+    }
+  }
+
   runApp(
     const ProviderScope(
       child: InsureBookApp(),
@@ -48,11 +68,58 @@ void main() async {
   );
 }
 
-class InsureBookApp extends ConsumerWidget {
+class InsureBookApp extends ConsumerStatefulWidget {
   const InsureBookApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<InsureBookApp> createState() => _InsureBookAppState();
+}
+
+class _InsureBookAppState extends ConsumerState<InsureBookApp> {
+  late StreamSubscription _shareIntentSub;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen for shared files while app is already running
+    _shareIntentSub = ReceiveSharingIntent.instance.getMediaStream().listen(
+      (List<SharedMediaFile> files) {
+        if (files.isEmpty) return;
+        final pdfFile = files.firstWhere(
+          (f) => f.path.toLowerCase().endsWith('.pdf'),
+          orElse: () => SharedMediaFile(path: '', type: SharedMediaType.file, mimeType: ''),
+        );
+        if (pdfFile.path.isNotEmpty) {
+          _navigateToPdfIntake(pdfFile);
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _shareIntentSub.cancel();
+    super.dispose();
+  }
+
+  void _navigateToPdfIntake(SharedMediaFile pdfFile) {
+    final file = File(pdfFile.path);
+    final fileSize = file.existsSync() ? file.lengthSync() : 0;
+    final fileName = pdfFile.path.split('/').last.split('\\').last;
+
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(
+        builder: (_) => PdfIntakeScreen(
+          filePath: pdfFile.path,
+          fileName: fileName,
+          fileSize: fileSize,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final themeMode = ref.watch(themeProvider);
     return MaterialApp(
       title: 'InsureBook',
@@ -69,7 +136,6 @@ class InsureBookApp extends ConsumerWidget {
         '/forgot-password':  (context) => const ForgotPasswordScreen(),
         '/dashboard':        (context) => const MainNavigationScreen(),
         '/customers':        (context) => const CustomerListScreen(),
-        '/customer_detail':   (context) => const CustomerDetailScreen(customerId: ''),
         '/policies':         (context) => const PolicyListScreen(),
         '/create_customer':  (context) => const CreateCustomerScreen(),
         '/add_policy':       (context) => const AddPolicyTypeScreen(),
@@ -82,6 +148,14 @@ class InsureBookApp extends ConsumerWidget {
         '/change_password':  (context) => const ChangePasswordScreen(),
         '/terms':            (context) => const TermsConditionsScreen(),
         '/expired_policies': (context) => const ExpiredPoliciesScreen(),
+        '/pdf_intake':       (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+          return PdfIntakeScreen(
+            filePath: args['filePath'] as String,
+            fileName: args['fileName'] as String,
+            fileSize: args['fileSize'] as int,
+          );
+        },
       },
       onGenerateRoute: (settings) {
         if (settings.name == '/customer_list') {
@@ -149,6 +223,12 @@ class InsureBookApp extends ConsumerWidget {
         if (settings.name == '/unassigned_leads') return MaterialPageRoute(builder: (_) => LeadListScreen(title: 'Unassigned Leads', filterProvider: unassignedLeadsProvider));
         if (settings.name == '/followup_leads') return MaterialPageRoute(builder: (_) => LeadListScreen(title: "Today's Follow-ups", filterProvider: todayFollowupsProvider));
         if (settings.name == '/overdue_leads') return MaterialPageRoute(builder: (_) => LeadListScreen(title: 'Overdue Follow-ups', filterProvider: overdueFollowupsProvider));
+        if (settings.name == '/lead_detail') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (_) => LeadDetailScreen(lead: args['lead'] as Lead),
+          );
+        }
         return null;
       },
     );
