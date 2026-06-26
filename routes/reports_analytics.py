@@ -173,8 +173,8 @@ async def get_reports_dashboard(
                     COALESCE(SUM(commission_amount), 0) as income
                 FROM policies_v2
                 WHERE agent_id = :agent_id
-                  AND created_at >= :start_date::date
-                  AND created_at < (:end_date::date + INTERVAL '1 month')
+                  AND created_at >= CAST(:start_date AS date)
+                  AND created_at < (CAST(:end_date AS date) + INTERVAL '1 month')
                 GROUP BY TO_CHAR(created_at, 'YYYY-MM')
                 ORDER BY month ASC
             """)
@@ -186,8 +186,8 @@ async def get_reports_dashboard(
                     0 as income
                 FROM policies
                 WHERE agent_id = :agent_id
-                  AND COALESCE(issue_date, start_date) >= :start_date::date
-                  AND COALESCE(issue_date, start_date) < (:end_date::date + INTERVAL '1 month')
+                  AND COALESCE(issue_date, start_date) >= CAST(:start_date AS date)
+                  AND COALESCE(issue_date, start_date) < (CAST(:end_date AS date) + INTERVAL '1 month')
                 GROUP BY TO_CHAR(COALESCE(issue_date, start_date), 'YYYY-MM')
                 ORDER BY month ASC
             """)
