@@ -110,7 +110,7 @@ async def _delete_from_cloudinary(file_url: str) -> None:
 # ── POST upload document ──────────────────────────────────────────────────────
 @router.post("/{customer_id}/documents")
 async def upload_customer_document(
-    customer_id: str,
+    customer_id: int,
     document_type: str = Form(...),
     file: UploadFile = File(...),
     notes: str = Form(""),
@@ -144,7 +144,7 @@ async def upload_customer_document(
     # Verify customer belongs to agent
     customer = (await db.execute(
         select(Customer).where(
-            Customer.id == int(customer_id),
+            Customer.id == customer_id,
             Customer.agent_id == current_user.id,
         )
     )).scalars().first()
@@ -187,7 +187,7 @@ async def upload_customer_document(
 # ── GET list documents ────────────────────────────────────────────────────────
 @router.get("/{customer_id}/documents")
 async def get_customer_documents(
-    customer_id: str,
+    customer_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -196,7 +196,7 @@ async def get_customer_documents(
     # Verify customer belongs to agent
     customer = (await db.execute(
         select(Customer).where(
-            Customer.id == int(customer_id),
+            Customer.id == customer_id,
             Customer.agent_id == current_user.id,
         )
     )).scalars().first()
@@ -229,7 +229,7 @@ async def get_customer_documents(
 # ── DELETE document ───────────────────────────────────────────────────────────
 @router.delete("/{customer_id}/documents/{doc_id}")
 async def delete_customer_document(
-    customer_id: str,
+    customer_id: int,
     doc_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -239,7 +239,7 @@ async def delete_customer_document(
     # Verify customer belongs to agent
     customer = (await db.execute(
         select(Customer).where(
-            Customer.id == int(customer_id),
+            Customer.id == customer_id,
             Customer.agent_id == current_user.id,
         )
     )).scalars().first()

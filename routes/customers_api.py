@@ -146,14 +146,14 @@ async def get_customers(
 # ── GET detail ────────────────────────────────────────────────────────────────
 @router.get("/{customer_id}")
 async def get_customer_detail(
-    customer_id: str,
+    customer_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     try:
         customer = (await db.execute(
             select(Customer).where(
-                Customer.id == int(customer_id),
+                Customer.id == customer_id,
                 Customer.agent_id == current_user.id
             )
         )).scalars().first()
@@ -197,8 +197,8 @@ async def get_customer_detail(
             "policies": policies_data,
         }
 
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid customer ID format")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch customer detail: {str(e)}")
 
@@ -222,6 +222,7 @@ async def create_customer(
             city=customer_data.get("city"),
             state=customer_data.get("state"),
             pincode=customer_data.get("pincode"),
+            ref_by=customer_data.get("ref_by"),
             status=customer_data.get("status", "active"),
         )
         db.add(new_customer)
@@ -246,7 +247,7 @@ async def create_customer(
 # ── PUT update ────────────────────────────────────────────────────────────────
 @router.put("/{customer_id}")
 async def update_customer(
-    customer_id: str,
+    customer_id: int,
     customer_data: Dict[str, Any],
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -255,7 +256,7 @@ async def update_customer(
     try:
         customer = (await db.execute(
             select(Customer).where(
-                Customer.id == int(customer_id),
+                Customer.id == customer_id,
                 Customer.agent_id == current_user.id
             )
         )).scalars().first()

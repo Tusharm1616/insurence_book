@@ -717,10 +717,10 @@ async def clear_agent_data(
         "agent_id": agent_id,
     }
 app.include_router(vehicle_documents.router)
+app.include_router(customer_documents.router)
 app.include_router(customers_api.router)
 app.include_router(policies_api.router)
 app.include_router(notifications_router.router)
-app.include_router(customer_documents.router)
 
 from datetime import datetime
 
