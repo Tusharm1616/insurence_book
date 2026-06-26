@@ -164,6 +164,7 @@ async def get_reports_dashboard(
         from dateutil.relativedelta import relativedelta
         end_date = date(year, month_num, 1)
         start_date = end_date - relativedelta(months=5)
+        end_boundary = end_date + relativedelta(months=1)
 
         if use_v2:
             trend_query = text("""
@@ -174,7 +175,7 @@ async def get_reports_dashboard(
                 FROM policies_v2
                 WHERE agent_id = :agent_id
                   AND created_at >= :start_date
-                  AND created_at < :end_date + INTERVAL '1 month'
+                  AND created_at < :end_boundary
                 GROUP BY TO_CHAR(created_at, 'YYYY-MM')
                 ORDER BY month ASC
             """)
@@ -187,7 +188,7 @@ async def get_reports_dashboard(
                 FROM policies
                 WHERE agent_id = :agent_id
                   AND COALESCE(issue_date, start_date) >= :start_date
-                  AND COALESCE(issue_date, start_date) < :end_date + INTERVAL '1 month'
+                  AND COALESCE(issue_date, start_date) < :end_boundary
                 GROUP BY TO_CHAR(COALESCE(issue_date, start_date), 'YYYY-MM')
                 ORDER BY month ASC
             """)
@@ -195,7 +196,7 @@ async def get_reports_dashboard(
         trend_result = await db.execute(trend_query, {
             "agent_id": agent_id,
             "start_date": start_date,
-            "end_date": end_date,
+            "end_boundary": end_boundary,
         })
         monthly_trend = [
             {"month": r[0], "business": float(r[1]), "income": float(r[2])}
