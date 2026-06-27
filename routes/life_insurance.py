@@ -48,18 +48,39 @@ async def get_report_summary(
     current_date = date.today()
     max_maturity = current_date + timedelta(days=90)
     
-    # Conditional aggregation (case-insensitive, 'active' treated as 'live')
-    query = text("""
-        SELECT
-            COUNT(*) FILTER (WHERE LOWER(status) IN ('live', 'active')) as live_count,
-            COUNT(*) FILTER (WHERE LOWER(status) = 'premium holiday') as holiday_count,
-            COUNT(*) FILTER (WHERE LOWER(status) = 'paidup') as paidup_count,
-            COUNT(*) FILTER (WHERE LOWER(status) IN ('live', 'active') AND maturity_date >= :current_date AND maturity_date <= :max_maturity) as upcoming_maturity_count,
-            COUNT(*) FILTER (WHERE LOWER(status) = 'matured') as matured_count,
-            COUNT(*) FILTER (WHERE LOWER(status) = 'lapsed') as lapsed_count
-        FROM policies
-        WHERE agent_id = :agent_id
-    """)
+    # Check if policies_v2 is available
+    use_v2 = False
+    try:
+        await db.execute(text("SELECT 1 FROM policies_v2 LIMIT 0"))
+        use_v2 = True
+    except Exception:
+        await db.rollback()
+
+    if use_v2:
+        query = text("""
+            SELECT
+                COUNT(*) FILTER (WHERE is_active = true) as live_count,
+                0 as holiday_count,
+                0 as paidup_count,
+                0 as upcoming_maturity_count,
+                0 as matured_count,
+                COUNT(*) FILTER (WHERE is_active = false OR end_date < :current_date) as lapsed_count
+            FROM policies_v2
+            WHERE agent_id = :agent_id
+        """)
+    else:
+        # Conditional aggregation (case-insensitive, 'active' treated as 'live')
+        query = text("""
+            SELECT
+                COUNT(*) FILTER (WHERE LOWER(status) IN ('live', 'active')) as live_count,
+                COUNT(*) FILTER (WHERE LOWER(status) = 'premium holiday') as holiday_count,
+                COUNT(*) FILTER (WHERE LOWER(status) = 'paidup') as paidup_count,
+                COUNT(*) FILTER (WHERE LOWER(status) IN ('live', 'active') AND maturity_date >= :current_date AND maturity_date <= :max_maturity) as upcoming_maturity_count,
+                COUNT(*) FILTER (WHERE LOWER(status) = 'matured') as matured_count,
+                COUNT(*) FILTER (WHERE LOWER(status) = 'lapsed') as lapsed_count
+            FROM policies
+            WHERE agent_id = :agent_id
+        """)
     
     result = await db.execute(query, {
         "agent_id": current_user.id,

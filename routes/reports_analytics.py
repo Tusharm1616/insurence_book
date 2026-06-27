@@ -434,16 +434,30 @@ async def get_life_insurance_report(
     try:
         agent_id = current_user.id
 
-        query = text("""
-            SELECT
-                COUNT(*) as total_policies,
-                COALESCE(SUM(premium_amount), 0) as total_premium,
-                COUNT(*) FILTER (WHERE LOWER(status) IN ('active', 'live')) as active_policies,
-                COUNT(*) FILTER (WHERE LOWER(status) IN ('expired', 'lapsed', 'matured')) as expired_policies,
-                0 as claims_filed
-            FROM policies
-            WHERE agent_id = :agent_id
-        """)
+        use_v2 = await _has_policies_v2(db)
+
+        if use_v2:
+            query = text("""
+                SELECT
+                    COUNT(*) as total_policies,
+                    COALESCE(SUM(final_amount), 0) as total_premium,
+                    COUNT(*) FILTER (WHERE is_active = true) as active_policies,
+                    COUNT(*) FILTER (WHERE is_active = false OR end_date < CURRENT_DATE) as expired_policies,
+                    COUNT(*) FILTER (WHERE claim_status = 'Claimed') as claims_filed
+                FROM policies_v2
+                WHERE agent_id = :agent_id
+            """)
+        else:
+            query = text("""
+                SELECT
+                    COUNT(*) as total_policies,
+                    COALESCE(SUM(premium_amount), 0) as total_premium,
+                    COUNT(*) FILTER (WHERE LOWER(status) IN ('active', 'live')) as active_policies,
+                    COUNT(*) FILTER (WHERE LOWER(status) IN ('expired', 'lapsed', 'matured')) as expired_policies,
+                    0 as claims_filed
+                FROM policies
+                WHERE agent_id = :agent_id
+            """)
 
         result = await db.execute(query, {"agent_id": agent_id})
         row = result.fetchone()
