@@ -213,6 +213,21 @@ async def create_customer(
     current_user: User = Depends(get_current_user)
 ):
     try:
+        full_name = customer_data.get("full_name", "").strip()
+        if not full_name:
+            raise HTTPException(status_code=400, detail="Customer full name is required")
+
+        # Check for existing customer with the same name
+        existing_customer = (await db.execute(
+            select(Customer).where(
+                func.lower(Customer.full_name) == full_name.lower(),
+                Customer.agent_id == current_user.id
+            )
+        )).scalars().first()
+
+        if existing_customer:
+            raise HTTPException(status_code=400, detail=f"Customer with name '{full_name}' already exists")
+
         new_customer = Customer(
             agent_id=current_user.id,
             full_name=customer_data.get("full_name"),
@@ -241,6 +256,8 @@ async def create_customer(
             "created_at": _safe_date(new_customer, "created_at"),
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create customer: {str(e)}")
@@ -266,6 +283,23 @@ async def update_customer(
         if not customer:
             raise HTTPException(status_code=404, detail="Customer not found")
 
+        new_full_name = customer_data.get("full_name")
+        if new_full_name is not None:
+            new_full_name = new_full_name.strip()
+            if not new_full_name:
+                raise HTTPException(status_code=400, detail="Customer full name is required")
+            
+            if new_full_name.lower() != customer.full_name.lower():
+                existing_customer = (await db.execute(
+                    select(Customer).where(
+                        func.lower(Customer.full_name) == new_full_name.lower(),
+                        Customer.agent_id == current_user.id
+                    )
+                )).scalars().first()
+
+                if existing_customer:
+                    raise HTTPException(status_code=400, detail=f"Customer with name '{new_full_name}' already exists")
+
         for field, value in customer_data.items():
             if hasattr(customer, field) and value is not None:
                 setattr(customer, field, _parse_date(value) if field in DATE_FIELDS else value)
@@ -283,6 +317,8 @@ async def update_customer(
             "updated_at": _safe_date(customer, "updated_at"),
         }
 
+    except HTTPException:
+        raise
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid customer ID format")
     except Exception as e:
