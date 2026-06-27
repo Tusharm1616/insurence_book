@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import '../utils/lucide_compat.dart';
 
 import '../core/theme.dart';
 import '../providers/dashboard_provider.dart';
+import '../providers/lead_provider.dart';
 import '../widgets/shimmer_widget.dart';
 import 'global_search_delegate.dart';
 
@@ -176,7 +177,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   // ── Statistics List ───────────────────────────────────────────────────────
   Widget _buildStatsList(BuildContext context, DashboardStats stats) {
+    final todayFollowups = ref.watch(todayFollowupsProvider);
     final items = [
+      _StatRow(
+        icon: LucideIcons.calendarClock,
+        iconColor: Colors.purple,
+        label: "Today's Follow-ups",
+        count: todayFollowups.length,
+        countColor: Colors.purple,
+        onTap: () => Navigator.pushNamed(context, '/followup_leads'),
+      ),
       _StatRow(
         icon: LucideIcons.users,
         iconColor: AppColors.info,

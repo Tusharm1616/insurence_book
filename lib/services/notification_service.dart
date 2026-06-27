@@ -69,4 +69,55 @@ class NotificationService {
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
+
+  /// Schedule a local notification at 9 AM on a specific follow-up date
+  Future<void> scheduleFollowupNotification({
+    required int leadId,
+    required String leadName,
+    required DateTime followupDate,
+  }) async {
+    // Schedule at 9 AM on the follow-up date
+    final scheduledDate = tz.TZDateTime(
+      tz.local,
+      followupDate.year,
+      followupDate.month,
+      followupDate.day,
+      9, 0, // 9:00 AM
+    );
+
+    // Don't schedule if it's in the past
+    if (scheduledDate.isBefore(tz.TZDateTime.now(tz.local))) return;
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'lead_followups',
+      'Lead Follow-ups',
+      channelDescription: 'Notifications for scheduled lead follow-ups',
+      importance: Importance.max,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(),
+    );
+
+    // Use lead ID + 1000 offset to avoid conflicts with other notification IDs
+    await _notificationsPlugin.zonedSchedule(
+      id: leadId + 1000,
+      title: 'Follow-up Reminder',
+      body: 'Follow-up scheduled with $leadName today.',
+      scheduledDate: scheduledDate,
+      notificationDetails: platformDetails,
+      androidScheduleMode: AndroidScheduleMode.exact,
+      payload: 'lead_followup_$leadId',
+    );
+
+    debugPrint('Scheduled follow-up notification for $leadName on $scheduledDate');
+  }
+
+  /// Cancel a follow-up notification
+  Future<void> cancelFollowupNotification(int leadId) async {
+    await _notificationsPlugin.cancel(id: leadId + 1000);
+  }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import '../utils/lucide_compat.dart';
 import 'add_policy_wizard.dart'; // We will create this next
 
 class MotorSubtypesScreen extends StatelessWidget {

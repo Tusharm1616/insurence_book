@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import '../utils/lucide_compat.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../providers/reminders_provider.dart';
@@ -15,22 +15,25 @@ class RemindersScreen extends ConsumerWidget {
       ? 'Happy Birthday $name! Wishing you a fantastic day!'
       : 'Happy Anniversary $name! Wishing you many more years of happiness together!';
     
-    // Clean phone number
-    final cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
-    final url = Uri.parse('whatsapp://send?phone=$cleanPhone&text=${Uri.encodeComponent(message)}');
+    // Clean phone number and ensure country code
+    String cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
+    if (!cleanPhone.startsWith('91') && cleanPhone.length == 10) {
+      cleanPhone = '91$cleanPhone';
+    }
+    
+    // Use https://wa.me/ which is more reliable across devices
+    final webUrl = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}');
     
     try {
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url);
-      } else {
-        // Fallback to web
-        final webUrl = Uri.parse('https://wa.me/$cleanPhone?text=${Uri.encodeComponent(message)}');
-        if (await canLaunchUrl(webUrl)) {
-          await launchUrl(webUrl);
-        }
-      }
+      await launchUrl(webUrl, mode: LaunchMode.externalApplication);
     } catch (e) {
-      debugPrint('Could not launch WhatsApp: $e');
+      // Fallback to whatsapp:// scheme
+      try {
+        final appUrl = Uri.parse('whatsapp://send?phone=$cleanPhone&text=${Uri.encodeComponent(message)}');
+        await launchUrl(appUrl, mode: LaunchMode.externalApplication);
+      } catch (e2) {
+        debugPrint('Could not launch WhatsApp: $e2');
+      }
     }
   }
 

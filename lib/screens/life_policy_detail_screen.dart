@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import '../utils/lucide_compat.dart';
 import '../providers/life_policy_list_provider.dart';
 
 class LifePolicyDetailScreen extends StatelessWidget {

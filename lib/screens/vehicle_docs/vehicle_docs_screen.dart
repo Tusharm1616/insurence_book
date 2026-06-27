@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import '../../utils/lucide_compat.dart';
 import '../../core/theme.dart';
 import '../../models/vehicle_document_model.dart';
 import '../../providers/vehicle_document_provider.dart';

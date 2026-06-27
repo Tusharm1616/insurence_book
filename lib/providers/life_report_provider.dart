@@ -34,3 +34,35 @@ final lifeReportProvider = FutureProvider<LifeReportSummary>((ref) async {
   final res = await apiService.dio.get('/api/life-insurance/report-summary');
   return LifeReportSummary.fromJson(res.data);
 });
+
+/// Life Insurance Report from the new /api/reports/life-insurance endpoint
+class LifeInsuranceReport {
+  final int totalPolicies;
+  final double totalPremium;
+  final int activePolicies;
+  final int expiredPolicies;
+  final int claimsFiled;
+
+  LifeInsuranceReport({
+    required this.totalPolicies,
+    required this.totalPremium,
+    required this.activePolicies,
+    required this.expiredPolicies,
+    required this.claimsFiled,
+  });
+
+  factory LifeInsuranceReport.fromJson(Map<String, dynamic> json) {
+    return LifeInsuranceReport(
+      totalPolicies: json['total_policies'] ?? 0,
+      totalPremium: (json['total_premium'] ?? 0).toDouble(),
+      activePolicies: json['active_policies'] ?? 0,
+      expiredPolicies: json['expired_policies'] ?? 0,
+      claimsFiled: json['claims_filed'] ?? 0,
+    );
+  }
+}
+
+final lifeInsuranceReportProvider = FutureProvider<LifeInsuranceReport>((ref) async {
+  final res = await apiService.dio.get('/api/reports/life-insurance');
+  return LifeInsuranceReport.fromJson(res.data);
+});

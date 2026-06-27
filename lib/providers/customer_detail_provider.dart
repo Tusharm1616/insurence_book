@@ -14,6 +14,7 @@ class CustomerDetail {
   final String city;
   final String state;
   final String pincode;
+  final String refBy;
   final String status;
   final String createdAt;
   final List<PolicyDetail> policies;
@@ -29,6 +30,7 @@ class CustomerDetail {
     required this.city,
     required this.state,
     required this.pincode,
+    required this.refBy,
     required this.status,
     required this.createdAt,
     required this.policies,
@@ -112,6 +114,7 @@ Future<CustomerDetail> _loadCustomerDetail(String customerId) async {
     city:             data['city']               ?? '',
     state:            data['state']              ?? '',
     pincode:          data['pincode']            ?? '',
+    refBy:            data['ref_by']             ?? '',
     status:           data['status']             ?? '',
     createdAt:        data['created_at']         ?? '',
     policies:         policies,

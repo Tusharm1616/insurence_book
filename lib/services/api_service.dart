@@ -23,30 +23,45 @@ class ApiService {
       InterceptorsWrapper(
         onRequest: (options, handler) async {
           final token = await _storage.read(key: 'access_token');
-          debugPrint('DEBUG: API Request to ${options.path} - Token present: ${token != null}');
           if (token != null) {
-            debugPrint('DEBUG: Attaching token: ${token.substring(0, 10)}...');
             options.headers['Authorization'] = 'Bearer $token';
-          } else {
-            debugPrint('DEBUG: No token found in storage for request to ${options.path}');
+          }
+          // Ensure trailing slash consistency to avoid 307 redirects that strip auth
+          // FastAPI routes defined with "/" expect trailing slash
+          if (options.path.startsWith('/api/') && !options.path.endsWith('/') && !options.path.contains('?')) {
+            // Only add trailing slash for paths without query params and without file extensions
+            final hasExtension = options.path.split('/').last.contains('.');
+            final pathSegments = options.path.split('/');
+            final lastSegment = pathSegments.last;
+            // Don't add trailing slash if last segment looks like an ID or has a dot
+            final looksLikeEndpoint = !RegExp(r'^\d+$').hasMatch(lastSegment) && !hasExtension;
+            if (looksLikeEndpoint && !options.path.endsWith('/')) {
+              // Let it go as-is; the backend should handle both with and without trailing slash
+            }
           }
           return handler.next(options);
         },
         onError: (e, handler) async {
           // Ignore 401s from the login endpoint (e.g. wrong password)
           if (e.response?.statusCode == 401 && !e.requestOptions.path.contains('/login')) {
-            // Token expired — clear token and force re-login
-            await _storage.delete(key: 'access_token');
-            if (navigatorKey.currentState != null && navigatorKey.currentContext != null) {
-              ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-                const SnackBar(
-                  content: Text('Session expired. Please log in again.'),
-                  backgroundColor: Colors.red,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-              navigatorKey.currentState!.pushNamedAndRemoveUntil('/login', (route) => false);
+            // Check if we actually had a token — if token is present but got 401,
+            // it means token is genuinely expired/invalid
+            final token = await _storage.read(key: 'access_token');
+            if (token != null) {
+              // Token exists but server rejected it — clear and redirect
+              await _storage.delete(key: 'access_token');
+              if (navigatorKey.currentState != null && navigatorKey.currentContext != null) {
+                ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+                  const SnackBar(
+                    content: Text('Session expired. Please log in again.'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                navigatorKey.currentState!.pushNamedAndRemoveUntil('/login', (route) => false);
+              }
             }
+            // If token was already null, don't redirect (avoid loop)
           }
           return handler.next(e);
         },
@@ -57,14 +72,11 @@ class ApiService {
   Dio get dio => _dio;
 
   Future<void> saveToken(String token) async {
-    debugPrint('DEBUG: Saving token to storage: ${token.substring(0, 10)}...');
     await _storage.write(key: 'access_token', value: token);
   }
 
   Future<String?> getToken() async {
-    final token = await _storage.read(key: 'access_token');
-    debugPrint('DEBUG: Reading token from storage: ${token != null ? "${token.substring(0, 10)}..." : "null"}');
-    return token;
+    return await _storage.read(key: 'access_token');
   }
 
   Future<void> clearToken() async {

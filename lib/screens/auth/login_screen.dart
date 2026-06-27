@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/custom_button.dart';
+import '../../main.dart' show pendingSharedPdf;
+import 'dart:io';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -12,7 +14,8 @@ class LoginScreen extends ConsumerStatefulWidget {
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends ConsumerState<LoginScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -35,9 +38,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
-    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
+          CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+        );
     _animationController.forward();
   }
 
@@ -71,18 +75,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
     setState(() => _isLoading = true);
-    
+
     // Unfocus keyboard
     FocusScope.of(context).unfocus();
 
     try {
-      await ref.read(authProvider.notifier).login(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
-      
+      await ref
+          .read(authProvider.notifier)
+          .login(_emailController.text.trim(), _passwordController.text);
+
       if (!mounted) return;
-      
+
       final error = ref.read(authProvider).error;
       if (error != null) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -102,7 +105,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        Navigator.pushReplacementNamed(context, '/dashboard');
+
+        if (pendingSharedPdf != null && pendingSharedPdf!.path.isNotEmpty) {
+          final pdfFile = pendingSharedPdf!;
+          pendingSharedPdf = null;
+          final file = File(pdfFile.path);
+          final fileSize = file.existsSync() ? file.lengthSync() : 0;
+          final fileName = pdfFile.path.split('/').last.split('\\').last;
+
+          Navigator.pushReplacementNamed(
+            context,
+            '/pdf_intake',
+            arguments: {
+              'filePath': pdfFile.path,
+              'fileName': fileName,
+              'fileSize': fileSize,
+            },
+          );
+        } else {
+          Navigator.pushReplacementNamed(context, '/dashboard');
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -150,7 +172,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                         ),
                       ),
                       const SizedBox(height: 24),
-                      
+
                       // Headings
                       const Text(
                         'Welcome Back!',
@@ -171,7 +193,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                         ),
                       ),
                       const SizedBox(height: 40),
-                      
+
                       // Email Field
                       CustomTextField(
                         controller: _emailController,
@@ -179,13 +201,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                         prefixIcon: Icons.person_outline,
                         keyboardType: TextInputType.emailAddress,
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) return 'Email is required';
-                          if (!value.contains('@')) return 'Enter a valid email';
+                          if (value == null || value.trim().isEmpty)
+                            return 'Email is required';
+                          if (!value.contains('@'))
+                            return 'Enter a valid email';
                           return null;
                         },
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Password Field
                       CustomTextField(
                         controller: _passwordController,
@@ -193,15 +217,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                         prefixIcon: Icons.lock_outline,
                         isPassword: true,
                         obscureText: _obscurePassword,
-                        onTogglePassword: () => setState(() => _obscurePassword = !_obscurePassword),
+                        onTogglePassword: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'Password is required';
-                          if (value.length < 6) return 'Password must be at least 6 characters';
+                          if (value == null || value.isEmpty)
+                            return 'Password is required';
+                          if (value.length < 6)
+                            return 'Password must be at least 6 characters';
                           return null;
                         },
                       ),
                       const SizedBox(height: 12),
-                      
+
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -233,7 +261,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                           ),
                           // Forgot Password Link
                           TextButton(
-                            onPressed: () => Navigator.pushNamed(context, '/forgot-password'),
+                            onPressed: () => Navigator.pushNamed(
+                              context,
+                              '/forgot-password',
+                            ),
                             style: TextButton.styleFrom(
                               foregroundColor: const Color(0xFF22C55E),
                               padding: EdgeInsets.zero,
@@ -248,7 +279,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                         ],
                       ),
                       const SizedBox(height: 32),
-                      
+
                       // Login Button
                       CustomButton(
                         text: 'Login',
@@ -256,20 +287,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                         isLoading: _isLoading,
                       ),
                       const SizedBox(height: 32),
-                      
+
                       // Divider
                       Row(
                         children: [
                           Expanded(child: Divider(color: Colors.grey.shade300)),
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Text('OR', style: TextStyle(color: Color(0xFF6B7280), fontSize: 12)),
+                            child: Text(
+                              'OR',
+                              style: TextStyle(
+                                color: Color(0xFF6B7280),
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
                           Expanded(child: Divider(color: Colors.grey.shade300)),
                         ],
                       ),
                       const SizedBox(height: 32),
-                      
+
                       // Register Link
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -280,7 +317,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
                           ),
                           GestureDetector(
                             onTap: () {
-                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(
+                                context,
+                              ).hideCurrentSnackBar();
                               Navigator.pushNamed(context, '/register');
                             },
                             child: const Text(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:intl/intl.dart';
+import '../utils/lucide_compat.dart';
 import '../core/theme.dart';
 import '../providers/lead_provider.dart';
 
@@ -22,38 +23,60 @@ class _AddLeadScreenState extends ConsumerState<AddLeadScreen> {
   String _notes = '';
   LeadStatus _status = LeadStatus.newLead;
   DateTime? _followupDate;
+  TimeOfDay? _followupTime;
+  bool _isSubmitting = false;
 
   final List<String> _insuranceTypes = [
     'Health Insurance', 'Motor Insurance', 'Life Insurance',
     'Travel Insurance', 'Home Insurance', 'Business Insurance',
     'Shop / Commercial', 'Two Wheeler', 'Accident Insurance',
-    'Term Insurance'
+    'Term Insurance',
   ];
 
   final List<String> _sources = [
     'Walk-in', 'Referral', 'Online', 'Call', 'Other',
   ];
 
-  void _saveLead() {
+  void _saveLead() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+      setState(() => _isSubmitting = true);
 
-      final newLead = Lead(
-        id: DateTime.now().millisecondsSinceEpoch,
-        name: _name,
-        mobile: _mobile,
-        email: _email,
-        insuranceType: _insuranceType,
-        source: _source,
-        notes: _notes,
-        status: _status,
-        createdAt: DateTime.now(),
-        followupDate: _status == LeadStatus.followup ? (_followupDate ?? DateTime.now().add(const Duration(days: 1))) : null,
-      );
+      DateTime? combinedFollowup;
+      if (_status == LeadStatus.followupScheduled && _followupDate != null) {
+        final time = _followupTime ?? const TimeOfDay(hour: 9, minute: 0);
+        combinedFollowup = DateTime(
+          _followupDate!.year, _followupDate!.month, _followupDate!.day,
+          time.hour, time.minute,
+        );
+      }
 
-      ref.read(leadProvider.notifier).addLead(newLead);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lead Added Successfully', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green));
-      Navigator.pop(context);
+      final data = {
+        'name': _name,
+        'phone': _mobile,
+        'email': _email,
+        'insurance_type': _insuranceType,
+        'source': _source,
+        'status': _status.apiValue,
+        'notes': _notes,
+        if (combinedFollowup != null) 'follow_up_date': combinedFollowup.toIso8601String(),
+      };
+
+      final result = await ref.read(leadProvider.notifier).addLead(data);
+      setState(() => _isSubmitting = false);
+
+      if (mounted) {
+        if (result != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Lead Added Successfully', style: TextStyle(color: Colors.white)), backgroundColor: Colors.green),
+          );
+          Navigator.pop(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to add lead', style: TextStyle(color: Colors.white)), backgroundColor: Colors.red),
+          );
+        }
+      }
     }
   }
 
@@ -110,12 +133,16 @@ class _AddLeadScreenState extends ConsumerState<AddLeadScreen> {
               DropdownButtonFormField<LeadStatus>(
                 initialValue: _status,
                 decoration: _ddDecoration(),
-                items: LeadStatus.values.map((e) => DropdownMenuItem(value: e, child: Text(e.label))).toList(),
+                items: LeadStatus.values
+                    .where((s) => s != LeadStatus.converted) // Can't manually set to converted
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e.label)))
+                    .toList(),
                 onChanged: (v) => setState(() => _status = v!),
               ),
               const SizedBox(height: 16),
 
-              if (_status == LeadStatus.followup) ...[
+              // Follow-up date+time picker when status is "Follow-up Scheduled"
+              if (_status == LeadStatus.followupScheduled) ...[
                 _label('Follow-up Date *'),
                 InkWell(
                   onTap: () async {
@@ -139,8 +166,42 @@ class _AddLeadScreenState extends ConsumerState<AddLeadScreen> {
                         const Icon(LucideIcons.calendar, size: 18, color: Colors.blueGrey),
                         const SizedBox(width: 12),
                         Text(
-                          _followupDate == null ? 'Select Date' : '${_followupDate!.day}/${_followupDate!.month}/${_followupDate!.year}',
+                          _followupDate == null
+                              ? 'Select Date'
+                              : DateFormat('dd/MM/yyyy').format(_followupDate!),
                           style: TextStyle(color: _followupDate == null ? Colors.grey : Colors.black87, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                _label('Follow-up Time'),
+                InkWell(
+                  onTap: () async {
+                    final t = await showTimePicker(
+                      context: context,
+                      initialTime: _followupTime ?? const TimeOfDay(hour: 9, minute: 0),
+                    );
+                    if (t != null) setState(() => _followupTime = t);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(LucideIcons.clock, size: 18, color: Colors.blueGrey),
+                        const SizedBox(width: 12),
+                        Text(
+                          _followupTime == null
+                              ? '09:00 AM (default)'
+                              : _followupTime!.format(context),
+                          style: TextStyle(color: _followupTime == null ? Colors.grey : Colors.black87, fontSize: 16),
                         ),
                       ],
                     ),
@@ -160,13 +221,15 @@ class _AddLeadScreenState extends ConsumerState<AddLeadScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _saveLead,
+                  onPressed: _isSubmitting ? null : _saveLead,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: const Text('Save Lead', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                  child: _isSubmitting
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Save Lead', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
               const SizedBox(height: 32),

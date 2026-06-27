@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import '../utils/lucide_compat.dart';
+import '../core/theme.dart';
 import '../providers/life_report_provider.dart';
 import 'life_policy_list_screen.dart';
 
@@ -26,37 +27,99 @@ class ReportsScreen extends ConsumerWidget {
                 Text(
                   'All Policies Report',
                   style: TextStyle(
-                    fontSize: 24, 
-                    fontWeight: FontWeight.bold, 
-                    color: Theme.of(context).textTheme.displayLarge?.color
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).textTheme.displayLarge?.color,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Tap a tile to view detailed list',
                   style: TextStyle(
-                    fontSize: 14, 
-                    color: Theme.of(context).textTheme.bodyMedium?.color
+                    fontSize: 14,
+                    color: Theme.of(context).textTheme.bodyMedium?.color,
                   ),
                 ),
+                const SizedBox(height: 24),
+
+                // ── Life Insurance Report Card ──────────────────────────────
+                _LifeInsuranceReportCard(),
+
                 const SizedBox(height: 24),
                 Text(
                   'Policy Overview',
                   style: TextStyle(
-                    fontSize: 18, 
-                    fontWeight: FontWeight.bold, 
-                    color: Theme.of(context).textTheme.displayLarge?.color
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).textTheme.displayLarge?.color,
                   ),
                 ),
                 const SizedBox(height: 16),
                 reportAsync.when(
                   data: (data) => _buildGrid(context, data),
-                  loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-                  error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.red))),
+                  loading: () => const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(40),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                  error: (err, stack) => _buildErrorWidget(context, ref, err.toString()),
                 ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget(BuildContext context, WidgetRef ref, String error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              LucideIcons.wifiOff,
+              size: 56,
+              color: AppColors.danger,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Failed to load report',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppThemeHelper.textPrimary(context),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              style: TextStyle(
+                fontSize: 13,
+                color: AppThemeHelper.textSecondary(context),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => ref.invalidate(lifeReportProvider),
+              icon: const Icon(LucideIcons.refreshCw, size: 18),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(140, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -190,5 +253,210 @@ class ReportsScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Life Insurance Report Card Widget (new /api/reports/life-insurance endpoint)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _LifeInsuranceReportCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reportAsync = ref.watch(lifeInsuranceReportProvider);
+
+    return reportAsync.when(
+      loading: () => _buildLoadingCard(context),
+      error: (err, _) => _buildErrorCard(context, ref, err.toString()),
+      data: (report) => _buildDataCard(context, report),
+    );
+  }
+
+  Widget _buildLoadingCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppThemeHelper.cardColor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppThemeHelper.borderColor(context)),
+      ),
+      child: const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: CircularProgressIndicator(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorCard(BuildContext context, WidgetRef ref, String error) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppThemeHelper.cardColor(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppThemeHelper.borderColor(context)),
+      ),
+      child: Column(
+        children: [
+          Icon(LucideIcons.alertCircle, size: 40, color: AppColors.danger),
+          const SizedBox(height: 12),
+          Text(
+            'Failed to load Life Insurance Report',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppThemeHelper.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            error,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppThemeHelper.textSecondary(context),
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () => ref.invalidate(lifeInsuranceReportProvider),
+            icon: const Icon(LucideIcons.refreshCw, size: 16),
+            label: const Text('Retry'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(120, 40),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDataCard(BuildContext context, LifeInsuranceReport report) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.85)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(LucideIcons.shield, color: Colors.white, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Life Insurance Report',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Stat cards grid
+          Row(
+            children: [
+              Expanded(
+                child: _statTile('Total Policies', report.totalPolicies.toString()),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _statTile('Total Premium', '₹${_formatAmount(report.totalPremium)}'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _statTile('Active', report.activePolicies.toString()),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _statTile('Expired', report.expiredPolicies.toString()),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _statTile('Claims', report.claimsFiled.toString()),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statTile(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.85),
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatAmount(double amount) {
+    if (amount >= 10000000) {
+      return '${(amount / 10000000).toStringAsFixed(1)}Cr';
+    } else if (amount >= 100000) {
+      return '${(amount / 100000).toStringAsFixed(1)}L';
+    } else if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(1)}K';
+    }
+    return amount.toStringAsFixed(0);
   }
 }
