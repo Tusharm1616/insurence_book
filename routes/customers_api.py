@@ -415,3 +415,60 @@ async def delete_customer(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete customer: {str(e)}")
+
+# -- GET customer policies --------------------------------------------------------
+@router.get('/{customer_id}/policies')
+async def get_customer_policies(
+    customer_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    print(f'Fetching policies for customer_id: {customer_id}')
+    try:
+        c_id = int(customer_id)
+    except ValueError:
+        return []
+
+    policies_v1 = (await db.execute(
+        select(Policy).where(Policy.customer_id == c_id)
+    )).scalars().all()
+    
+    policies_v2 = (await db.execute(
+        select(PolicyV2).where(PolicyV2.customer_id == c_id)
+    )).scalars().all()
+
+    if not policies_v1 and not policies_v2:
+        return []
+
+    policies_data = []
+    for p in policies_v1:
+        policies_data.append({
+            'id': str(p.id),
+            'policy_number': p.policy_number or '',
+            'policy_type': p.policy_type or '',
+            'insurer_name': p.insurer_name or '',
+            'plan_name': p.plan_name or '',
+            'sum_insured': float(p.sum_assured) if p.sum_assured else 0.0,
+            'premium_amount': float(p.premium_amount) if p.premium_amount else 0.0,
+            'start_date': p.start_date.isoformat() if p.start_date else '',
+            'end_date': p.end_date.isoformat() if p.end_date else '',
+            'status': p.status or 'active',
+            'nominee_name': p.nominee_name or '',
+            'nominee_relation': p.nominee_relation or '',
+        })
+    for p in policies_v2:
+        policies_data.append({
+            'id': str(p.id),
+            'policy_number': p.policy_number or '',
+            'policy_type': p.insurance_type or '',
+            'insurer_name': p.insurance_company or '',
+            'plan_name': '',
+            'sum_insured': float(p.total_amount) if p.total_amount else 0.0,
+            'premium_amount': float(p.final_amount) if p.final_amount else 0.0,
+            'start_date': p.start_date.isoformat() if p.start_date else '',
+            'end_date': p.end_date.isoformat() if p.end_date else '',
+            'status': 'active' if p.is_active else 'inactive',
+            'nominee_name': '',
+            'nominee_relation': '',
+        })
+    return policies_data
+

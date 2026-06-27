@@ -1,14 +1,20 @@
 import asyncio
-from database import SessionLocal
-from models.policies import Policy
-from sqlalchemy.future import select
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy import text
+
+DATABASE_URL = "postgresql+asyncpg://neondb_owner:npg_A3DFoP0rZNwK@ep-purple-bar-aoax9tb8.c-2.ap-southeast-1.aws.neon.tech/neondb?ssl=require"
 
 async def main():
-    async with SessionLocal() as db:
-        result = await db.execute(select(Policy.id, Policy.policy_type, Policy.status, Policy.agent_id))
-        policies = result.all()
-        for p in policies:
-            print(f"ID: {p.id}, Type: '{p.policy_type}', Status: '{p.status}', Agent: {p.agent_id}")
+    engine = create_async_engine(DATABASE_URL)
+    async with engine.begin() as conn:
+        print("--- policies with agent_id ---")
+        result = await conn.execute(text("SELECT id, policy_number, agent_id, customer_id, issue_date, premium_amount FROM policies ORDER BY id DESC LIMIT 5;"))
+        for row in result.fetchall():
+            print(row)
+            
+        print("--- matching users ---")
+        result = await conn.execute(text("SELECT id, full_name, email FROM users ORDER BY id DESC LIMIT 15;"))
+        for row in result.fetchall():
+            print(row)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+asyncio.run(main())

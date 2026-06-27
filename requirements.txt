@@ -20,3 +20,6 @@ python-dateutil==2.8.2
 qrcode==7.4.2
 cloudinary==1.40.0
 # v8 - Docker deployment with Python 3.11.9
+psycopg2-binary
+alembic
+passlib
