@@ -34,17 +34,34 @@ async def create_policy(
 ):
     """Create a new policy. Agent is set from authenticated user."""
 
-    # 1. Verify customer belongs to the authenticated agent
-    result = await db.execute(
-        select(Customer).where(Customer.id == policy_in.customer_id)
-    )
-    customer = result.scalars().first()
-
-    if not customer or customer.agent_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Customer not found",
+    # 1. Verify or create the customer
+    if policy_in.customer_id:
+        result = await db.execute(
+            select(Customer).where(Customer.id == policy_in.customer_id)
         )
+        customer = result.scalars().first()
+        if not customer or customer.agent_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Customer not found",
+            )
+    else:
+        if not policy_in.customer_name:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Either customer_id or customer_name must be provided",
+            )
+        # Create a new customer on the fly
+        new_customer = Customer(
+            agent_id=current_user.id,
+            full_name=policy_in.customer_name,
+            phone="",
+            email=""
+        )
+        db.add(new_customer)
+        await db.commit()
+        await db.refresh(new_customer)
+        policy_in.customer_id = new_customer.id
 
     # 1.5 Auto-generate policy number if missing
     policy_number = policy_in.policy_number

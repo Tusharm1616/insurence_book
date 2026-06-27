@@ -15,7 +15,8 @@ VALID_CLAIM_STATUSES = {"No Claim", "Claimed", "Pending"}
 # ── Request Schemas ─────────────────────────────────────────────────────────
 
 class PolicyV2Create(BaseModel):
-    customer_id: int
+    customer_id: Optional[int] = None
+    customer_name: Optional[str] = None
     policy_number: Optional[str] = Field(default=None, max_length=50)
     insurance_company: Optional[str] = Field(default=None, max_length=100)
     insurance_type: Literal["Life", "Motor", "Health", "Travel", "Other"]
