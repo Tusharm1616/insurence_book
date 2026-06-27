@@ -205,7 +205,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -303,8 +303,8 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: customer.status == 'active'
-                        ? Colors.green.withValues(alpha: 0.1)
-                        : Colors.grey.withValues(alpha: 0.1),
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -423,7 +423,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getPolicyTypeColor(policy.policyType).withValues(alpha: 0.1),
+                    color: _getPolicyTypeColor(policy.policyType).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -488,7 +488,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getPolicyStatusColor(policy.status).withValues(alpha: 0.1),
+                    color: _getPolicyStatusColor(policy.status).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -504,7 +504,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getDaysRemainingColor(policy.endDate).withValues(alpha: 0.1),
+                    color: _getDaysRemainingColor(policy.endDate).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -630,10 +630,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
   }
 
   String _formatCurrency(double amount) {
-    return amount.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+$)'),
-      (match) => '${match[1]}${match[2] != null ? ',' : ''}${match[2] ?? ''}',
-    );
+    return NumberFormat.decimalPattern('en_IN').format(amount);
   }
 
   Color _getPolicyTypeColor(String policyType) {
@@ -714,6 +711,9 @@ class _DocumentsTabState extends ConsumerState<_DocumentsTab> {
     'PAN',
     'Driving Licence',
     'RC Book',
+    'New Policy',
+    'Renewal Policy',
+    'Claim Document',
     'Other',
   ];
 
@@ -727,6 +727,12 @@ class _DocumentsTabState extends ConsumerState<_DocumentsTab> {
         return Icons.directions_car;
       case 'RC Book':
         return Icons.description;
+      case 'New Policy':
+        return Icons.policy;
+      case 'Renewal Policy':
+        return Icons.autorenew;
+      case 'Claim Document':
+        return Icons.assignment_late;
       default:
         return Icons.insert_drive_file;
     }
@@ -742,6 +748,12 @@ class _DocumentsTabState extends ConsumerState<_DocumentsTab> {
         return Colors.orange;
       case 'RC Book':
         return Colors.teal;
+      case 'New Policy':
+        return Colors.green;
+      case 'Renewal Policy':
+        return Colors.purple;
+      case 'Claim Document':
+        return Colors.red;
       default:
         return Colors.grey;
     }
@@ -1081,7 +1093,7 @@ class _DocumentsTabState extends ConsumerState<_DocumentsTab> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: _getDocTypeColor(doc.documentType).withValues(alpha: 0.1),
+                color: _getDocTypeColor(doc.documentType).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
