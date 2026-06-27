@@ -155,7 +155,8 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
 
       // Build payload for /api/policies-v2/ endpoint
       final payload = <String, dynamic>{
-        'customer_id': _selectedCustomerId, // must be provided or backend fails
+        'customer_id': _selectedCustomerId,
+        'customer_name': _selectedCustomerId == null ? clientName : null,
         'policy_number': _policyNoCtrl.text.trim(),
         'insurance_company': _insuranceCompany ?? 'Unknown',
         'insurance_type': getValidInsuranceType(widget.policyType),
@@ -169,11 +170,6 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
         'claim_status': 'No Claim',
         'commission_percent': double.tryParse(_commissionPercentCtrl.text.replaceAll(',', '')) ?? 0.0,
       };
-
-      // Since the frontend previously allowed creation without a customer_id, but the v2 API requires it
-      if (_selectedCustomerId == null) {
-        throw Exception("Customer must be selected first to create a policy");
-      }
 
       await apiService.dio.post('/api/policies-v2/', data: payload);
 
