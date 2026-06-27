@@ -53,8 +53,14 @@ void main() async {
   final initialMedia = await ReceiveSharingIntent.instance.getInitialMedia();
   if (initialMedia.isNotEmpty) {
     final pdfFile = initialMedia.firstWhere(
-      (f) => f.path.toLowerCase().endsWith('.pdf'),
-      orElse: () => SharedMediaFile(path: '', type: SharedMediaType.file, mimeType: ''),
+      (f) {
+        final path = f.path.toLowerCase();
+        final mime = f.mimeType?.toLowerCase() ?? '';
+        return path.endsWith('.pdf') || mime.contains('pdf');
+      },
+      orElse: () => initialMedia.first.type == SharedMediaType.file 
+          ? initialMedia.first 
+          : SharedMediaFile(path: '', type: SharedMediaType.file, mimeType: ''),
     );
     if (pdfFile.path.isNotEmpty) {
       pendingSharedPdf = pdfFile;
@@ -86,8 +92,14 @@ class _InsureBookAppState extends ConsumerState<InsureBookApp> {
       (List<SharedMediaFile> files) {
         if (files.isEmpty) return;
         final pdfFile = files.firstWhere(
-          (f) => f.path.toLowerCase().endsWith('.pdf'),
-          orElse: () => SharedMediaFile(path: '', type: SharedMediaType.file, mimeType: ''),
+          (f) {
+            final path = f.path.toLowerCase();
+            final mime = f.mimeType?.toLowerCase() ?? '';
+            return path.endsWith('.pdf') || mime.contains('pdf');
+          },
+          orElse: () => files.first.type == SharedMediaType.file 
+              ? files.first 
+              : SharedMediaFile(path: '', type: SharedMediaType.file, mimeType: ''),
         );
         if (pdfFile.path.isNotEmpty) {
           _navigateToPdfIntake(pdfFile);
