@@ -40,6 +40,17 @@ class CustomerNotifier extends Notifier<AsyncValue<List<Customer>>> {
       current.map((c) => c.id == id ? c.copyWith(isActive: !c.isActive) : c).toList(),
     );
   }
+
+  Future<void> deleteCustomer(int id) async {
+    try {
+      await apiService.dio.delete('/customers/$id');
+      final current = state.asData?.value ?? [];
+      state = AsyncValue.data(current.where((c) => c.id != id).toList());
+    } catch (e) {
+      debugPrint('Failed to delete customer: $e');
+      rethrow;
+    }
+  }
 }
 
 final customerProvider =

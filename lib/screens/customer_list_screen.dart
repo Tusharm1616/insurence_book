@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import '../utils/lucide_compat.dart';
 import '../core/theme.dart';
 import '../providers/customer_provider.dart';
 import '../models/customer_model.dart';
@@ -93,6 +93,48 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
               foregroundColor: Colors.white,
             ),
             child: Text(customer.isActive ? 'Deactivate' : 'Activate'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _deleteCustomer(BuildContext context, Customer customer) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Customer?'),
+        content: Text('Are you sure you want to completely delete ${customer.fullName}? This action cannot be undone and will delete all their policies.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await ref.read(customerProvider.notifier).deleteCustomer(customer.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('${customer.fullName} deleted successfully.'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ));
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Failed to delete customer.'),
+                    backgroundColor: Colors.red,
+                    behavior: SnackBarBehavior.floating,
+                  ));
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -237,10 +279,10 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                       children: [
                         Text(
                           customer.fullName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF1C1C1C),
+                            color: AppThemeHelper.textPrimary(context),
                             fontFamily: 'Poppins',
                           ),
                         ),
@@ -250,9 +292,9 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                             Expanded(
                               child: Text(
                                 customer.mobileNumber,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
-                                  color: Color(0xFF6B7280),
+                                  color: AppThemeHelper.textSecondary(context),
                                   fontFamily: 'Poppins',
                                 ),
                               ),
@@ -264,9 +306,9 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                           Text(
                             customer.email!,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF6B7280),
+                              color: AppThemeHelper.textSecondary(context),
                               fontFamily: 'Poppins',
                             ),
                           ),
@@ -275,9 +317,9 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                           const SizedBox(height: 4),
                           Text(
                             '${customer.city ?? ''}${(customer.city ?? '').isNotEmpty && (customer.state ?? '').isNotEmpty ? ', ' : ''}${customer.state ?? ''}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
-                              color: Color(0xFF6B7280),
+                              color: AppThemeHelper.textSecondary(context),
                               fontFamily: 'Poppins',
                             ),
                           ),
@@ -299,6 +341,18 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
                       fontWeight: FontWeight.w600,
                       color: customer.isActive ? Colors.green : Colors.grey,
                     ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () => _deleteCustomer(context, customer),
+                  child: Container(
+                    padding: const EdgeInsets.all(4.0),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(LucideIcons.trash2, size: 18, color: Colors.red),
                   ),
                 ),
               ],
