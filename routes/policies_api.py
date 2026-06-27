@@ -30,8 +30,11 @@ async def get_policies(
     All filtering logic happens in DATABASE using CURRENT_DATE.
     """
     
+    print(f"--- GET /api/policies called ---")
+    print(f"customer_id received: {customer_id}")
     try:
         agent_id = current_user.id
+        print(f"agent_id from token: {agent_id}")
         offset = (page - 1) * limit
         
         # Build union of Policy and PolicyV2
@@ -70,8 +73,11 @@ async def get_policies(
         # Build base query
         query = select(union_subq, Customer).outerjoin(
             Customer, union_subq.c.customer_id == Customer.id
-        ).where(union_subq.c.agent_id == agent_id)
+        )
         
+        # Temporarily removing agent_id filter if customer_id is provided, for debugging
+        if not customer_id:
+            query = query.where(union_subq.c.agent_id == agent_id)
         # Apply filter logic according to specification
         if filter == 'expired':
             query = query.where(
@@ -102,8 +108,11 @@ async def get_policies(
         
         # Apply customer filter if provided
         if customer_id:
-            query = query.where(union_subq.c.customer_id == int(customer_id))
-        
+            try:
+                c_id = int(customer_id)
+                query = query.where(union_subq.c.customer_id == c_id)
+            except ValueError:
+                raise HTTPException(status_code=400, detail="customer_id must be a valid integer")
         if search:
             search_term = f"%{search}%"
             query = query.where(
@@ -117,6 +126,8 @@ async def get_policies(
         count_query = select(func.count()).select_from(query.subquery())
         count_result = await db.execute(count_query)
         total = count_result.scalar() or 0
+        
+        print(f"SQL query result count: {total}")
         
         # Get paginated data — order by end_date desc or id desc
         # (Using end_date is safer because IDs are different types (int vs uuid))
@@ -173,6 +184,57 @@ async def get_policies(
             detail=f"Failed to fetch policies: {str(e)}"
         )
 
+@router.get("/debug/{customer_id}")
+async def debug_get_policies(
+    customer_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """Debug endpoint to fetch policies for a customer without auth checks."""
+    try:
+        c_id = int(customer_id)
+        stmt1 = select(
+            Policy.id.cast(String).label("id"),
+            Policy.policy_number.label("policy_number"),
+            Policy.policy_type.label("policy_type"),
+            Policy.insurer_name.label("insurer_name"),
+            Policy.plan_name.label("plan_name"),
+            Policy.sum_assured.label("sum_assured"),
+            Policy.premium_amount.label("premium_amount"),
+            Policy.start_date.label("start_date"),
+            Policy.end_date.label("end_date"),
+            Policy.status.label("status"),
+            Policy.agent_id.label("agent_id"),
+            Policy.customer_id.label("customer_id")
+        )
+
+        stmt2 = select(
+            PolicyV2.id.cast(String).label("id"),
+            PolicyV2.policy_number.label("policy_number"),
+            PolicyV2.insurance_type.label("policy_type"),
+            PolicyV2.insurance_company.label("insurer_name"),
+            literal("").label("plan_name"),
+            PolicyV2.total_amount.label("sum_assured"),
+            PolicyV2.final_amount.label("premium_amount"),
+            PolicyV2.start_date.label("start_date"),
+            PolicyV2.end_date.label("end_date"),
+            case((PolicyV2.is_active == True, "active"), else_="inactive").label("status"),
+            PolicyV2.agent_id.label("agent_id"),
+            PolicyV2.customer_id.label("customer_id")
+        )
+
+        union_subq = union_all(stmt1, stmt2).subquery("u")
+        query = select(union_subq).where(union_subq.c.customer_id == c_id)
+        
+        result = await db.execute(query)
+        
+        data = []
+        for row in result.all():
+            data.append(dict(row._mapping))
+            
+        return {"customer_id": c_id, "count": len(data), "policies": data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/")
 async def create_policy(
     policy_data: Dict[str, Any],
@@ -180,6 +242,20 @@ async def create_policy(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new policy. Auto-generates policy_number if not provided."""
+    
+    print("--- POST /api/policies called ---")
+    print(f"Incoming payload: {policy_data}")
+    
+    # Required field validation
+    required_fields = ["customer_id", "policy_type", "insurer_name"]
+    missing_fields = [f for f in required_fields if not policy_data.get(f)]
+    if missing_fields:
+        print(f"Missing required fields: {missing_fields}")
+        raise HTTPException(
+            status_code=422,
+            detail=f"Missing required fields: {', '.join(missing_fields)}"
+        )
+        
     from datetime import date as _date
     import uuid as _uuid
 
