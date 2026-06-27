@@ -133,413 +133,107 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
 
   // ── Policies Tab ─────────────────────────────────────────────────────────────
   Widget _buildPoliciesTab(BuildContext context, CustomerDetail customer) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: _buildPoliciesSection(context, customer),
-    );
-  }
-
-  // ── Timeline Tab ─────────────────────────────────────────────────────────────
-  Widget _buildTimelineTab(BuildContext context, CustomerDetail customer) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (customer.createdAt.isNotEmpty)
-            _buildTimelineItem(
-              icon: Icons.person_add,
-              color: AppColors.primary,
-              title: 'Customer Created',
-              subtitle: _formatDate(customer.createdAt),
-            ),
-          ...customer.policies.map((policy) => _buildTimelineItem(
-            icon: Icons.policy,
-            color: _getPolicyTypeColor(policy.policyType),
-            title: 'Policy Added: ${policy.policyNumber}',
-            subtitle: '${policy.insurerName} — ${_formatDate(policy.startDate)}',
-          )),
-          if (customer.policies.isEmpty && customer.createdAt.isEmpty)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Column(
-                  children: [
-                    Icon(Icons.timeline, size: 64, color: Colors.grey[300]),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No timeline events yet',
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: 16,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimelineItem({
-    required IconData icon,
-    required Color color,
-    required String title,
-    required String subtitle,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: Theme.of(context).dividerColor),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPersonalInfoCard(BuildContext context, CustomerDetail customer) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Theme.of(context).dividerColor),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Personal Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppThemeHelper.textPrimary(context),
-                fontFamily: 'Poppins',
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            _buildInfoRow(context, 'Full Name', customer.fullName),
-            _buildInfoRow(context, 'Phone', customer.phone.isNotEmpty ? customer.phone : 'N/A'),
-            _buildInfoRow(context, 'Email', customer.email.isNotEmpty ? customer.email : 'N/A'),
-            _buildInfoRow(context, 'Date of Birth', customer.dob.isNotEmpty ? _formatDate(customer.dob) : 'N/A'),
-            _buildInfoRow(context, 'Anniversary', customer.anniversaryDate.isNotEmpty ? _formatDate(customer.anniversaryDate) : 'N/A'),
-            _buildInfoRow(context, 'Address', customer.address.isNotEmpty ? customer.address : 'N/A'),
-            _buildInfoRow(context, 'City', customer.city.isNotEmpty ? customer.city : 'N/A'),
-            _buildInfoRow(context, 'State', customer.state.isNotEmpty ? customer.state : 'N/A'),
-            _buildInfoRow(context, 'Pincode', customer.pincode.isNotEmpty ? customer.pincode : 'N/A'),
-            _buildInfoRow(context, 'Ref By', customer.refBy.isNotEmpty ? customer.refBy : 'N/A'),
-
-            const SizedBox(height: 16),
-
-            // Status chip
-            Row(
-              children: [
-                Text(
-                  'Status:',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppThemeHelper.textSecondary(context),
-                    fontFamily: 'Poppins',
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: customer.status == 'active'
-                        ? Colors.green.withOpacity(0.1)
-                        : Colors.grey.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    customer.status == 'active' ? 'Active' : 'Inactive',
-                    style: TextStyle(
-                      color: customer.status == 'active' ? Colors.green : Colors.grey,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPoliciesSection(BuildContext context, CustomerDetail customer) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Policies (${customer.policies.length})',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppThemeHelper.textPrimary(context),
-                fontFamily: 'Poppins',
+        // Header
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Policies (${customer.policies.length})',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
               ),
-            ),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pushNamed(
-                  context,
-                  '/add_policy',
-                  arguments: {'customerId': widget.customerId},
-                );
-              },
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('Add Policy'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.pushNamed(context, '/add_policy', arguments: {'customerId': widget.customerId}),
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add Policy'),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        const SizedBox(height: 16),
-        if (customer.policies.isEmpty)
-          _buildEmptyState('No policies added yet', Icons.policy_outlined)
-        else
-          ...customer.policies.map((policy) => _buildPolicyMiniCard(context, policy, customer.fullName)),
+        
+        // List of policies
+        Expanded(
+          child: customer.policies.isEmpty
+              ? _buildEmptyState('No policies added yet', Icons.policy_outlined)
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: customer.policies.length,
+                  itemBuilder: (context, index) {
+                    final policy = customer.policies[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: Theme.of(context).dividerColor),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              policy.policyNumber,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${policy.insurerName} — ${policy.planName.isNotEmpty ? policy.planName : policy.policyType}',
+                              style: TextStyle(fontSize: 14, color: Colors.grey[700], fontFamily: 'Poppins'),
+                            ),
+                            const SizedBox(height: 8),
+                            Text('Sum Insured: ₹${_formatCurrency(policy.sumInsured)}  |  Premium: ₹${_formatCurrency(policy.premiumAmount)}/yr',
+                                style: const TextStyle(fontSize: 13, fontFamily: 'Poppins')),
+                            const SizedBox(height: 4),
+                            Text('Dates: ${_formatDate(policy.startDate)} to ${_formatDate(policy.endDate)}',
+                                style: TextStyle(fontSize: 13, color: Colors.grey[600], fontFamily: 'Poppins')),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Chip(
+                                  label: Text(policy.status.isNotEmpty ? policy.status : 'Unknown', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  backgroundColor: _getPolicyStatusColor(policy.status).withOpacity(0.1),
+                                  side: BorderSide.none,
+                                  labelPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: -4),
+                                ),
+                                Chip(
+                                  label: Text(_getDaysRemainingText(policy.endDate), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  backgroundColor: _getDaysRemainingColor(policy.endDate).withOpacity(0.1),
+                                  side: BorderSide.none,
+                                  labelPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: -4),
+                                ),
+                                _PolicyPdfActionButton(
+                                  icon: Icons.download,
+                                  tooltip: 'Download PDF',
+                                  policyId: policy.id,
+                                  policyNumber: policy.policyNumber,
+                                  isDownload: true,
+                                ),
+                                _PolicyPdfActionButton(
+                                  icon: Icons.share,
+                                  tooltip: 'Share PDF',
+                                  policyId: policy.id,
+                                  policyNumber: policy.policyNumber,
+                                  customerName: customer.fullName,
+                                  isDownload: false,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
       ],
-    );
-  }
-
-  Widget _buildEmptyState(String message, IconData icon) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          children: [
-            Icon(icon, size: 64, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 16,
-                fontFamily: 'Poppins',
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPolicyMiniCard(BuildContext context, PolicyDetail policy, String customerName) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Theme.of(context).dividerColor),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    policy.policyNumber,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppThemeHelper.textPrimary(context),
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getPolicyTypeColor(policy.policyType).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    policy.policyType,
-                    style: TextStyle(
-                      color: _getPolicyTypeColor(policy.policyType),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '${policy.insurerName} — ${policy.planName}',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppThemeHelper.textSecondary(context),
-                fontFamily: 'Poppins',
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Sum Insured: ₹${_formatCurrency(policy.sumInsured)}',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppThemeHelper.textPrimary(context),
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    'Premium: ₹${_formatCurrency(policy.premiumAmount)}/yr',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppThemeHelper.textPrimary(context),
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Start: ${_formatDate(policy.startDate)}  →  End: ${_formatDate(policy.endDate)}',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppThemeHelper.textSecondary(context),
-                fontFamily: 'Poppins',
-              ),
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getPolicyStatusColor(policy.status).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    policy.status.isNotEmpty ? policy.status : 'Unknown',
-                    style: TextStyle(
-                      color: _getPolicyStatusColor(policy.status),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getDaysRemainingColor(policy.endDate).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    _getDaysRemainingText(policy.endDate),
-                    style: TextStyle(
-                      color: _getDaysRemainingColor(policy.endDate),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                ),
-                // Buttons at the end
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _PolicyPdfActionButton(
-                      icon: Icons.download,
-                      tooltip: 'Download PDF',
-                      policyId: policy.id,
-                      policyNumber: policy.policyNumber,
-                      isDownload: true,
-                    ),
-                    const SizedBox(width: 8),
-                    _PolicyPdfActionButton(
-                      icon: Icons.share,
-                      tooltip: 'Share PDF',
-                      policyId: policy.id,
-                      policyNumber: policy.policyNumber,
-                      customerName: customerName,
-                      isDownload: false,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 
