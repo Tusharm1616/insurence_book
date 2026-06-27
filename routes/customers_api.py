@@ -288,3 +288,32 @@ async def update_customer(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to update customer: {str(e)}")
+
+
+# ── DELETE customer ───────────────────────────────────────────────────────────
+@router.delete("/{customer_id}")
+async def delete_customer(
+    customer_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        customer = (await db.execute(
+            select(Customer).where(
+                Customer.id == customer_id,
+                Customer.agent_id == current_user.id
+            )
+        )).scalars().first()
+
+        if not customer:
+            raise HTTPException(status_code=404, detail="Customer not found")
+
+        await db.delete(customer)
+        await db.commit()
+        return {"message": "Customer deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete customer: {str(e)}")
