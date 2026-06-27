@@ -1,29 +1,20 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import func, and_, text, case
+from sqlalchemy import func, and_, text, case, literal, union_all, String
 from typing import List, Dict
 from datetime import date, timedelta
+import uuid
 
 from database import get_db
 from models.users import User
 from models.policies import Policy
+from models.policy_v2 import PolicyV2
 from models.customers import Customer
 from schemas.dashboard import ExpiringCountResponse, ExpiringPolicyItem, ExpiringListResponse, ExpiredPolicyItem, ExpiredListResponse
 from utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/dashboard", tags=["Dashboard"])
-
-# ── Helper: effective expiry date = end_date if set, else expiry_date ─────────
-# Policies may have been saved with either column name depending on which
-# endpoint created them. We COALESCE both so counts are always accurate.
-def _eff_expiry(Policy):
-    """SQLAlchemy expression: COALESCE(end_date, expiry_date)"""
-    return case(
-        (Policy.end_date.isnot(None), Policy.end_date),
-        else_=Policy.expiry_date
-    )
-
 
 @router.get("/stats")
 async def get_dashboard_stats(
@@ -47,11 +38,15 @@ async def get_dashboard_stats(
         )).scalar() or 0
 
         # All policies
-        all_policies = (await db.execute(
+        all_policies_v1 = (await db.execute(
             select(func.count(Policy.id)).where(Policy.agent_id == agent_id)
         )).scalar() or 0
+        all_policies_v2 = (await db.execute(
+            select(func.count(PolicyV2.id)).where(PolicyV2.agent_id == agent_id)
+        )).scalar() or 0
+        all_policies = all_policies_v1 + all_policies_v2
 
-        # Use raw SQL for the date-based counts so COALESCE works cleanly
+        # Expired Policies
         expired_result = await db.execute(
             text("""
                 SELECT COUNT(*) FROM policies
@@ -61,8 +56,17 @@ async def get_dashboard_stats(
             """),
             {"agent_id": agent_id}
         )
-        expired_policies = expired_result.scalar() or 0
+        expired_v2_result = await db.execute(
+            text("""
+                SELECT COUNT(*) FROM policies_v2
+                WHERE agent_id = :agent_id
+                  AND end_date < CURRENT_DATE
+            """),
+            {"agent_id": agent_id}
+        )
+        expired_policies = (expired_result.scalar() or 0) + (expired_v2_result.scalar() or 0)
 
+        # Expiring in 1 month
         expiring_1m_result = await db.execute(
             text("""
                 SELECT COUNT(*) FROM policies
@@ -73,8 +77,19 @@ async def get_dashboard_stats(
             """),
             {"agent_id": agent_id}
         )
-        expiring_1_month = expiring_1m_result.scalar() or 0
+        expiring_1m_v2_result = await db.execute(
+            text("""
+                SELECT COUNT(*) FROM policies_v2
+                WHERE agent_id = :agent_id
+                  AND end_date >= CURRENT_DATE
+                  AND end_date <= CURRENT_DATE + INTERVAL '30 days'
+                  AND is_active = true
+            """),
+            {"agent_id": agent_id}
+        )
+        expiring_1_month = (expiring_1m_result.scalar() or 0) + (expiring_1m_v2_result.scalar() or 0)
 
+        # Expiring in 2 months
         expiring_2m_result = await db.execute(
             text("""
                 SELECT COUNT(*) FROM policies
@@ -85,7 +100,17 @@ async def get_dashboard_stats(
             """),
             {"agent_id": agent_id}
         )
-        expiring_2_months = expiring_2m_result.scalar() or 0
+        expiring_2m_v2_result = await db.execute(
+            text("""
+                SELECT COUNT(*) FROM policies_v2
+                WHERE agent_id = :agent_id
+                  AND end_date >= CURRENT_DATE
+                  AND end_date <= CURRENT_DATE + INTERVAL '60 days'
+                  AND is_active = true
+            """),
+            {"agent_id": agent_id}
+        )
+        expiring_2_months = (expiring_2m_result.scalar() or 0) + (expiring_2m_v2_result.scalar() or 0)
 
         return {
             "all_customers": all_customers,
@@ -106,7 +131,7 @@ async def get_expiring_count(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    result = await db.execute(
+    v1_res = await db.execute(
         text("""
             SELECT COUNT(*) FROM policies
             WHERE agent_id = :agent_id
@@ -116,7 +141,17 @@ async def get_expiring_count(
         """),
         {"agent_id": current_user.id, "days": days}
     )
-    count = result.scalar() or 0
+    v2_res = await db.execute(
+        text("""
+            SELECT COUNT(*) FROM policies_v2
+            WHERE agent_id = :agent_id
+              AND end_date >= CURRENT_DATE
+              AND end_date <= CURRENT_DATE + CAST(:days || ' days' AS INTERVAL)
+              AND is_active = true
+        """),
+        {"agent_id": current_user.id, "days": days}
+    )
+    count = (v1_res.scalar() or 0) + (v2_res.scalar() or 0)
     return ExpiringCountResponse(count=count, filter_days=days)
 
 
@@ -132,37 +167,65 @@ async def get_expiring_list(
     max_date = current_date + timedelta(days=days)
     offset = (page - 1) * limit
 
-    # Use LEFT JOIN so policies without a customer still appear
-    base = and_(
+    # Build union of Policy and PolicyV2
+    stmt1 = select(
+        Policy.id.cast(String).label("id"),
+        Policy.policy_number.label("policy_number"),
+        Policy.policy_type.label("policy_type"),
+        Policy.insurer_name.label("insurer_name"),
+        Policy.premium_amount.label("premium_amount"),
+        func.coalesce(Policy.end_date, Policy.expiry_date).label("end_date"),
+        Policy.status.label("status"),
+        Policy.agent_id.label("agent_id"),
+        Policy.customer_id.label("customer_id")
+    ).where(
         Policy.agent_id == current_user.id,
         func.lower(Policy.status).in_(['live', 'active']),
         func.coalesce(Policy.end_date, Policy.expiry_date) >= current_date,
-        func.coalesce(Policy.end_date, Policy.expiry_date) <= max_date,
+        func.coalesce(Policy.end_date, Policy.expiry_date) <= max_date
     )
 
-    total = (await db.execute(
-        select(func.count(Policy.id)).where(base)
-    )).scalar() or 0
-
-    result = await db.execute(
-        select(Policy, Customer)
-        .outerjoin(Customer, Policy.customer_id == Customer.id)
-        .where(base)
-        .order_by(func.coalesce(Policy.end_date, Policy.expiry_date).asc())
-        .offset(offset).limit(limit)
+    stmt2 = select(
+        PolicyV2.id.cast(String).label("id"),
+        PolicyV2.policy_number.label("policy_number"),
+        PolicyV2.insurance_type.label("policy_type"),
+        PolicyV2.insurance_company.label("insurer_name"),
+        PolicyV2.final_amount.label("premium_amount"),
+        PolicyV2.end_date.label("end_date"),
+        literal("active").label("status"),
+        PolicyV2.agent_id.label("agent_id"),
+        PolicyV2.customer_id.label("customer_id")
+    ).where(
+        PolicyV2.agent_id == current_user.id,
+        PolicyV2.is_active == True,
+        PolicyV2.end_date >= current_date,
+        PolicyV2.end_date <= max_date
     )
+
+    union_subq = union_all(stmt1, stmt2).subquery("u")
+
+    total = (await db.execute(select(func.count()).select_from(union_subq))).scalar() or 0
+
+    query = select(union_subq, Customer).outerjoin(
+        Customer, union_subq.c.customer_id == Customer.id
+    ).order_by(union_subq.c.end_date.asc()).offset(offset).limit(limit)
+
+    result = await db.execute(query)
 
     items = []
-    for policy, customer in result.all():
-        eff_date = policy.end_date or policy.expiry_date
-        days_remaining = (eff_date - current_date).days if eff_date else 0
+    for row in result.all():
+        policy = row[0:9]
+        customer = row[9]
+        p_id, p_no, p_type, p_ins, p_prem, p_end, p_stat, p_agent, p_cust = policy
+        
+        days_remaining = (p_end - current_date).days if p_end else 0
         items.append(ExpiringPolicyItem(
-            policy_id=policy.id,
-            policy_number=policy.policy_number or "",
-            policy_type=policy.policy_type or "",
-            insurer_name=policy.insurer_name,
-            premium_amount=policy.premium_amount,
-            expiry_date=eff_date,
+            policy_id=p_id,
+            policy_number=p_no or "",
+            policy_type=p_type or "",
+            insurer_name=p_ins,
+            premium_amount=float(p_prem) if p_prem else 0.0,
+            expiry_date=p_end,
             days_remaining=days_remaining,
             customer_full_name=customer.full_name if customer else "Unknown",
             customer_phone_number=customer.phone if customer else ""
@@ -176,7 +239,7 @@ async def get_expired_count(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    result = await db.execute(
+    v1_res = await db.execute(
         text("""
             SELECT COUNT(*) FROM policies
             WHERE agent_id = :agent_id
@@ -184,7 +247,15 @@ async def get_expired_count(
         """),
         {"agent_id": current_user.id}
     )
-    return {"count": result.scalar() or 0}
+    v2_res = await db.execute(
+        text("""
+            SELECT COUNT(*) FROM policies_v2
+            WHERE agent_id = :agent_id
+              AND end_date < CURRENT_DATE
+        """),
+        {"agent_id": current_user.id}
+    )
+    return {"count": (v1_res.scalar() or 0) + (v2_res.scalar() or 0)}
 
 
 @router.get("/expired-list", response_model=ExpiredListResponse)
@@ -197,34 +268,58 @@ async def get_expired_list(
     current_date = date.today()
     offset = (page - 1) * limit
 
-    base = and_(
+    stmt1 = select(
+        Policy.id.cast(String).label("id"),
+        Policy.policy_number.label("policy_number"),
+        Policy.policy_type.label("policy_type"),
+        Policy.insurer_name.label("insurer_name"),
+        Policy.premium_amount.label("premium_amount"),
+        func.coalesce(Policy.end_date, Policy.expiry_date).label("end_date"),
+        Policy.agent_id.label("agent_id"),
+        Policy.customer_id.label("customer_id")
+    ).where(
         Policy.agent_id == current_user.id,
-        func.coalesce(Policy.end_date, Policy.expiry_date) < current_date,
+        func.coalesce(Policy.end_date, Policy.expiry_date) < current_date
     )
 
-    total = (await db.execute(
-        select(func.count(Policy.id)).where(base)
-    )).scalar() or 0
-
-    result = await db.execute(
-        select(Policy, Customer)
-        .outerjoin(Customer, Policy.customer_id == Customer.id)
-        .where(base)
-        .order_by(func.coalesce(Policy.end_date, Policy.expiry_date).desc())
-        .offset(offset).limit(limit)
+    stmt2 = select(
+        PolicyV2.id.cast(String).label("id"),
+        PolicyV2.policy_number.label("policy_number"),
+        PolicyV2.insurance_type.label("policy_type"),
+        PolicyV2.insurance_company.label("insurer_name"),
+        PolicyV2.final_amount.label("premium_amount"),
+        PolicyV2.end_date.label("end_date"),
+        PolicyV2.agent_id.label("agent_id"),
+        PolicyV2.customer_id.label("customer_id")
+    ).where(
+        PolicyV2.agent_id == current_user.id,
+        PolicyV2.end_date < current_date
     )
+
+    union_subq = union_all(stmt1, stmt2).subquery("u")
+
+    total = (await db.execute(select(func.count()).select_from(union_subq))).scalar() or 0
+
+    query = select(union_subq, Customer).outerjoin(
+        Customer, union_subq.c.customer_id == Customer.id
+    ).order_by(union_subq.c.end_date.desc()).offset(offset).limit(limit)
+
+    result = await db.execute(query)
 
     items = []
-    for policy, customer in result.all():
-        eff_date = policy.end_date or policy.expiry_date
-        days_overdue = (current_date - eff_date).days if eff_date else 0
+    for row in result.all():
+        policy = row[0:8]
+        customer = row[8]
+        p_id, p_no, p_type, p_ins, p_prem, p_end, p_agent, p_cust = policy
+        
+        days_overdue = (current_date - p_end).days if p_end else 0
         items.append(ExpiredPolicyItem(
-            policy_id=policy.id,
-            policy_number=policy.policy_number or "",
-            policy_type=policy.policy_type or "",
-            insurer_name=policy.insurer_name,
-            premium_amount=policy.premium_amount,
-            expiry_date=eff_date,
+            policy_id=p_id,
+            policy_number=p_no or "",
+            policy_type=p_type or "",
+            insurer_name=p_ins,
+            premium_amount=float(p_prem) if p_prem else 0.0,
+            expiry_date=p_end,
             days_overdue=days_overdue,
             customer_full_name=customer.full_name if customer else "Unknown",
             customer_phone_number=customer.phone if customer else ""
