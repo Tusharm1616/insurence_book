@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/theme.dart';
 import '../providers/policies_provider.dart';
+import '../services/policy_pdf_service.dart';
 import '../widgets/shimmer_widget.dart';
 
 class PolicyListScreen extends ConsumerStatefulWidget {
@@ -229,7 +230,7 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
             
             const SizedBox(height: 12),
             
-            // Bottom row: status and days badge
+            // Bottom row: status, days badge, and share button
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -267,6 +268,70 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
                       fontFamily: 'Poppins',
                     ),
                   ),
+                ),
+
+                Row(
+                  children: [
+                    // Share PDF button
+                    _SharePdfButton(
+                      policyId: policy.id,
+                      policyNumber: policy.policyNumber,
+                      customerName: policy.customer.fullName,
+                    ),
+                    const SizedBox(width: 8),
+                    // Delete button
+                    InkWell(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            title: const Text('Delete Policy?', style: TextStyle(fontFamily: 'Poppins')),
+                            content: Text('Are you sure you want to completely delete policy ${policy.policyNumber}? This action cannot be undone.', style: const TextStyle(fontFamily: 'Poppins')),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  Navigator.pop(ctx);
+                                  try {
+                                    await ref.read(policiesProvider.notifier).deletePolicy(policy.id);
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                        content: Text('Policy deleted successfully.'),
+                                        backgroundColor: Colors.red,
+                                        behavior: SnackBarBehavior.floating,
+                                      ));
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                        content: Text('Failed to delete policy.'),
+                                        backgroundColor: Colors.red,
+                                        behavior: SnackBarBehavior.floating,
+                                      ));
+                                    }
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  foregroundColor: Colors.white,
+                                ),
+                                child: const Text('Delete'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(6.0),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -472,6 +537,57 @@ class _PolicyListScreenState extends ConsumerState<PolicyListScreen> {
     } else {
       return '$daysRemaining days left';
     }
+  }
+}
+
+/// Small stateful widget for the share button to manage its own loading state.
+class _SharePdfButton extends StatefulWidget {
+  final String policyId;
+  final String policyNumber;
+  final String customerName;
+
+  const _SharePdfButton({
+    required this.policyId,
+    required this.policyNumber,
+    required this.customerName,
+  });
+
+  @override
+  State<_SharePdfButton> createState() => _SharePdfButtonState();
+}
+
+class _SharePdfButtonState extends State<_SharePdfButton> {
+  bool _isLoading = false;
+
+  Future<void> _sharePdf() async {
+    setState(() => _isLoading = true);
+    await PolicyPdfService.sharePolicyPdf(
+      context: context,
+      policyId: widget.policyId,
+      policyNumber: widget.policyNumber,
+      customerName: widget.customerName,
+    );
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 32,
+      height: 32,
+      child: _isLoading
+          ? const Padding(
+              padding: EdgeInsets.all(6),
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+            )
+          : IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              icon: Icon(Icons.share, size: 20, color: AppColors.primary),
+              tooltip: 'Share PDF',
+              onPressed: _sharePdf,
+            ),
+    );
   }
 }
 

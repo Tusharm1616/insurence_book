@@ -148,6 +148,15 @@ class PoliciesNotifier extends Notifier<AsyncValue<PolicyListResponse>> {
   Future<void> refreshPolicies() async {
     await fetchPolicies(refresh: true);
   }
+
+  Future<void> deletePolicy(String id) async {
+    try {
+      await apiService.dio.delete('/api/policies/$id');
+      await fetchPolicies(refresh: true);
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
 
 final policiesProvider =
