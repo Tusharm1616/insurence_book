@@ -229,9 +229,11 @@ class _ReportsAnalyticsScreenState extends ConsumerState<ReportsAnalyticsScreen>
   // ── Section 2: Summary Cards ──────────────────────────────────────────────
 
   Widget _buildSummaryCards(ReportsDashboard data) {
-    final conversionRate = data.leadsTotal > 0
-        ? ((data.leadsConverted / data.leadsTotal) * 100).round()
-        : 0;
+    int conversionRate = 0;
+    if (data.leadsTotal > 0) {
+      conversionRate = ((data.saleComplete / data.leadsTotal) * 100).round();
+      if (conversionRate > 100) conversionRate = 100; // Cap at 100%
+    }
 
     return GridView.count(
       crossAxisCount: 2,
@@ -316,7 +318,7 @@ class _ReportsAnalyticsScreenState extends ConsumerState<ReportsAnalyticsScreen>
             children: [
               _funnelItem('Leads', data.leadsTotal, AppColors.info),
               _funnelArrow(),
-              _funnelItem('Converted', data.leadsConverted, AppColors.primary),
+              _funnelItem('Converted', data.saleComplete, AppColors.primary),
               _funnelArrow(),
               _funnelItem('Pending', data.salePending, AppColors.warning),
             ],

@@ -25,7 +25,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
   late Future<List<PolicyDetail>> _policiesFuture;
 
   Future<List<PolicyDetail>> fetchPolicies(String customerId) async {
-    final url = '/api/policies?customer_id=$customerId';
+    final url = '/api/policies/?customer_id=$customerId';
     print('--- fetchPolicies called ---');
     print('Customer ID: $customerId');
     print('Full API URL: $url');
