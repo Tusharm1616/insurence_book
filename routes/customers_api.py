@@ -9,6 +9,7 @@ from database import get_db
 from models.users import User
 from models.customers import Customer
 from models.policies import Policy
+from models.policy_v2 import PolicyV2
 from utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/customers", tags=["Customers"])
@@ -90,7 +91,15 @@ async def get_customers(
                 .group_by(Policy.customer_id)
             )
             for cid, cnt in total_pol_result.all():
-                total_pol_map[cid] = cnt
+                total_pol_map[cid] = total_pol_map.get(cid, 0) + cnt
+                
+            total_pol_v2_result = await db.execute(
+                select(PolicyV2.customer_id, func.count(PolicyV2.id))
+                .where(PolicyV2.customer_id.in_(customer_ids))
+                .group_by(PolicyV2.customer_id)
+            )
+            for cid, cnt in total_pol_v2_result.all():
+                total_pol_map[cid] = total_pol_map.get(cid, 0) + cnt
 
             # Active policies per customer
             active_pol_result = await db.execute(
@@ -102,7 +111,18 @@ async def get_customers(
                 .group_by(Policy.customer_id)
             )
             for cid, cnt in active_pol_result.all():
-                active_pol_map[cid] = cnt
+                active_pol_map[cid] = active_pol_map.get(cid, 0) + cnt
+                
+            active_pol_v2_result = await db.execute(
+                select(PolicyV2.customer_id, func.count(PolicyV2.id))
+                .where(
+                    PolicyV2.customer_id.in_(customer_ids),
+                    PolicyV2.is_active == True
+                )
+                .group_by(PolicyV2.customer_id)
+            )
+            for cid, cnt in active_pol_v2_result.all():
+                active_pol_map[cid] = active_pol_map.get(cid, 0) + cnt
 
             # Latest policy end date per customer (use COALESCE for end_date/expiry_date)
             from sqlalchemy import case
@@ -121,6 +141,21 @@ async def get_customers(
             )
             for cid, latest_end in latest_result.all():
                 latest_end_map[cid] = latest_end
+                
+            latest_v2_result = await db.execute(
+                select(
+                    PolicyV2.customer_id,
+                    func.max(PolicyV2.end_date).label("latest_end")
+                )
+                .where(PolicyV2.customer_id.in_(customer_ids))
+                .group_by(PolicyV2.customer_id)
+            )
+            for cid, latest_end in latest_v2_result.all():
+                current_latest = latest_end_map.get(cid)
+                if current_latest is None:
+                    latest_end_map[cid] = latest_end
+                elif latest_end is not None and latest_end > current_latest:
+                    latest_end_map[cid] = latest_end
 
         data = []
         for c in customers:
@@ -161,8 +196,12 @@ async def get_customer_detail(
         if not customer:
             raise HTTPException(status_code=404, detail="Customer not found")
 
-        policies = (await db.execute(
+        policies_v1 = (await db.execute(
             select(Policy).where(Policy.customer_id == customer.id).order_by(Policy.id.desc())
+        )).scalars().all()
+        
+        policies_v2 = (await db.execute(
+            select(PolicyV2).where(PolicyV2.customer_id == customer.id).order_by(PolicyV2.id.desc())
         )).scalars().all()
 
         policies_data = [{
@@ -180,7 +219,30 @@ async def get_customer_detail(
             "status": p.status or "active",
             "nominee_name": p.nominee_name or "",
             "nominee_relation": p.nominee_relation or "",
-        } for p in policies]
+        } for p in policies_v1]
+        
+        for p in policies_v2:
+            policies_data.append({
+                "id": str(p.id),
+                "policy_number": p.policy_number or "",
+                "policy_type": p.insurance_type or "",
+                "insurer_name": p.insurance_company or "",
+                "plan_name": "", 
+                "sum_insured": float(p.total_amount) if p.total_amount else 0.0,
+                "premium_amount": float(p.final_amount) if p.final_amount else 0.0,
+                "start_date": p.start_date.isoformat() if p.start_date else None,
+                "end_date": p.end_date.isoformat() if p.end_date else None,
+                "issue_date": p.created_at.date().isoformat() if p.created_at else None,
+                "expiry_date": p.end_date.isoformat() if p.end_date else None,
+                "status": "active" if p.is_active else "inactive",
+                "nominee_name": "",
+                "nominee_relation": "",
+            })
+            
+        policies_data.sort(
+            key=lambda x: x["start_date"] or x["issue_date"] or "", 
+            reverse=True
+        )
 
         return {
             "id": str(customer.id),
