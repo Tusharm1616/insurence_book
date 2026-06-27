@@ -153,186 +153,146 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
     );
   }
 
-  // ── Policies Tab ─────────────────────────────────────────────────────────────
   Widget _buildPoliciesTab(BuildContext context, CustomerDetail customer) {
-    return FutureBuilder<List<PolicyDetail>>(
-      future: _policiesFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Failed to load policies:\n${snapshot.error}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.red, fontFamily: 'Poppins'),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        _policiesFuture = fetchPolicies(widget.customerId);
-                      });
-                    },
-                    child: const Text('Retry'),
-                  ),
-                ],
+    final policies = customer.policies;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                'Policies (${policies.length})',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  await Navigator.pushNamed(context, '/add_policy', arguments: {'customerId': widget.customerId});
+                  // Refresh the whole customer detail provider so we get the new policies
+                  ref.invalidate(customerDetailProvider(widget.customerId.toString()));
+                },
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('Add Policy'),
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Empty State
+          if (policies.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.policy_outlined, size: 64, color: Colors.grey),
+                    const SizedBox(height: 16),
+                    const Text('No policies yet', style: TextStyle(fontSize: 18, color: Colors.grey)),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        await Navigator.pushNamed(context, '/add_policy', arguments: {'customerId': widget.customerId});
+                        ref.invalidate(customerDetailProvider(widget.customerId.toString()));
+                      },
+                      icon: const Icon(Icons.add, color: Colors.white),
+                      label: const Text('Add Policy', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                    ),
+                  ],
+                ),
               ),
             ),
-          );
-        }
 
-        final policies = snapshot.data ?? [];
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Text(
-                    'Policies (${policies.length})',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+          // List of policies
+          if (policies.isNotEmpty)
+            ...policies.map((policy) {
+              try {
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: BorderSide(color: Theme.of(context).dividerColor),
                   ),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      await Navigator.pushNamed(context, '/add_policy', arguments: {'customerId': widget.customerId});
-                      setState(() {
-                        _policiesFuture = fetchPolicies(widget.customerId);
-                      });
-                    },
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Add Policy'),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              
-              // Empty State
-              if (policies.isEmpty)
-                Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(32.0),
+                    padding: const EdgeInsets.all(16),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.policy_outlined, size: 64, color: Colors.grey),
-                        const SizedBox(height: 16),
-                        const Text('No policies yet', style: TextStyle(fontSize: 18, color: Colors.grey)),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () async {
-                            await Navigator.pushNamed(context, '/add_policy', arguments: {'customerId': widget.customerId});
-                            setState(() {
-                              _policiesFuture = fetchPolicies(widget.customerId);
-                            });
-                          },
-                          icon: const Icon(Icons.add, color: Colors.white),
-                          label: const Text('Add Policy', style: TextStyle(color: Colors.white)),
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                        Text(
+                          policy.policyNumber.isNotEmpty ? policy.policyNumber : 'No Policy Number',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${policy.insurerName.isNotEmpty ? policy.insurerName : 'Unknown'} • ${policy.planName.isNotEmpty ? policy.planName : (policy.policyType.isNotEmpty ? policy.policyType : 'N/A')}',
+                          style: TextStyle(fontSize: 14, color: Colors.grey[700], fontFamily: 'Poppins'),
+                        ),
+                        const SizedBox(height: 8),
+                        Text('Sum Insured: ₹${_formatCurrency(policy.sumInsured)}  |  Premium: ₹${_formatCurrency(policy.premiumAmount)}/yr',
+                            style: const TextStyle(fontSize: 13, fontFamily: 'Poppins')),
+                        const SizedBox(height: 4),
+                        Text('Dates: ${_formatDate(policy.startDate)} to ${_formatDate(policy.endDate)}',
+                            style: TextStyle(fontSize: 13, color: Colors.grey[600], fontFamily: 'Poppins')),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Chip(
+                              label: Text(policy.status.isNotEmpty ? policy.status : 'Unknown', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              backgroundColor: _getPolicyStatusColor(policy.status).withOpacity(0.1),
+                              side: BorderSide.none,
+                              labelPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: -4),
+                            ),
+                            Chip(
+                              label: Text(_getDaysRemainingText(policy.endDate), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                              backgroundColor: _getDaysRemainingColor(policy.endDate).withOpacity(0.1),
+                              side: BorderSide.none,
+                              labelPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: -4),
+                            ),
+                            _PolicyPdfActionButton(
+                              icon: Icons.download,
+                              tooltip: 'Download PDF',
+                              policyId: policy.id,
+                              policyNumber: policy.policyNumber,
+                              isDownload: true,
+                            ),
+                            _PolicyPdfActionButton(
+                              icon: Icons.share,
+                              tooltip: 'Share PDF',
+                              policyId: policy.id,
+                              policyNumber: policy.policyNumber,
+                              customerName: customer.fullName,
+                              isDownload: false,
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                ),
-
-              // List of policies
-              if (policies.isNotEmpty)
-                ...policies.map((policy) {
-                  try {
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: Theme.of(context).dividerColor),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              policy.policyNumber.isNotEmpty ? policy.policyNumber : 'No Policy Number',
-                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${policy.insurerName.isNotEmpty ? policy.insurerName : 'Unknown'} • ${policy.planName.isNotEmpty ? policy.planName : (policy.policyType.isNotEmpty ? policy.policyType : 'N/A')}',
-                              style: TextStyle(fontSize: 14, color: Colors.grey[700], fontFamily: 'Poppins'),
-                            ),
-                            const SizedBox(height: 8),
-                            Text('Sum Insured: ₹${_formatCurrency(policy.sumInsured)}  |  Premium: ₹${_formatCurrency(policy.premiumAmount)}/yr',
-                                style: const TextStyle(fontSize: 13, fontFamily: 'Poppins')),
-                            const SizedBox(height: 4),
-                            Text('Dates: ${_formatDate(policy.startDate)} to ${_formatDate(policy.endDate)}',
-                                style: TextStyle(fontSize: 13, color: Colors.grey[600], fontFamily: 'Poppins')),
-                            const SizedBox(height: 12),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                Chip(
-                                  label: Text(policy.status.isNotEmpty ? policy.status : 'Unknown', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                  backgroundColor: _getPolicyStatusColor(policy.status).withOpacity(0.1),
-                                  side: BorderSide.none,
-                                  labelPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: -4),
-                                ),
-                                Chip(
-                                  label: Text(_getDaysRemainingText(policy.endDate), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                                  backgroundColor: _getDaysRemainingColor(policy.endDate).withOpacity(0.1),
-                                  side: BorderSide.none,
-                                  labelPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: -4),
-                                ),
-                                _PolicyPdfActionButton(
-                                  icon: Icons.download,
-                                  tooltip: 'Download PDF',
-                                  policyId: policy.id,
-                                  policyNumber: policy.policyNumber,
-                                  isDownload: true,
-                                ),
-                                _PolicyPdfActionButton(
-                                  icon: Icons.share,
-                                  tooltip: 'Share PDF',
-                                  policyId: policy.id,
-                                  policyNumber: policy.policyNumber,
-                                  customerName: customer.fullName,
-                                  isDownload: false,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  } catch (e) {
-                    return Card(
-                      color: Colors.red[50],
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Text('Error displaying policy: $e\nPlease take a screenshot of this error.', style: const TextStyle(color: Colors.red)),
-                      ),
-                    );
-                  }
-                }),
-            ],
-          ),
-        );
-      },
+                );
+              } catch (e) {
+                return Card(
+                  color: Colors.red[50],
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text('Error displaying policy: $e\nPlease take a screenshot of this error.', style: const TextStyle(color: Colors.red)),
+                  ),
+                );
+              }
+            }),
+        ],
+      ),
     );
   }
 
