@@ -120,12 +120,17 @@ class _PdfIntakeScreenState extends ConsumerState<PdfIntakeScreen> {
     setState(() => _isSaving = true);
 
     try {
+      String finalFileName = widget.fileName;
+      if (!finalFileName.toLowerCase().endsWith('.pdf')) {
+        finalFileName += '.pdf';
+      }
+
       final formData = FormData.fromMap({
         'document_type': _documentType,
         'notes': _notesController.text.trim(),
         'file': await MultipartFile.fromFile(
           widget.filePath,
-          filename: widget.fileName,
+          filename: finalFileName,
         ),
       });
 
