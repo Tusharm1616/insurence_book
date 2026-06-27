@@ -382,3 +382,33 @@ async def update_policy(
             status_code=500,
             detail=f"Failed to update policy: {str(e)}"
         )
+
+# ── DELETE policy ─────────────────────────────────────────────────────────────
+@router.delete("/{policy_id}")
+async def delete_policy(
+    policy_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    try:
+        policy = (await db.execute(
+            select(Policy).where(
+                Policy.id == int(policy_id),
+                Policy.agent_id == current_user.id
+            )
+        )).scalars().first()
+
+        if not policy:
+            raise HTTPException(status_code=404, detail="Policy not found")
+
+        await db.delete(policy)
+        await db.commit()
+        return {"message": "Policy deleted successfully"}
+
+    except HTTPException:
+        raise
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid policy ID format")
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to delete policy: {str(e)}")
