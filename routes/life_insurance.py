@@ -51,8 +51,8 @@ async def get_report_summary(
     # Check if policies_v2 is available
     use_v2 = False
     try:
-        await db.execute(text("SELECT 1 FROM policies_v2 LIMIT 0"))
-        use_v2 = True
+        result = await db.execute(text("SELECT 1 FROM policies_v2 LIMIT 1"))
+        use_v2 = result.scalar() is not None
     except Exception:
         await db.rollback()
 

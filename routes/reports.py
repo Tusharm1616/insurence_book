@@ -17,10 +17,10 @@ router = APIRouter(prefix="/api/reports", tags=["Reports"])
 
 
 async def _has_policies_v2(db: AsyncSession) -> bool:
-    """Check if policies_v2 table exists and is usable."""
+    """Check if policies_v2 table exists and has data."""
     try:
-        await db.execute(text("SELECT 1 FROM policies_v2 LIMIT 0"))
-        return True
+        result = await db.execute(text("SELECT 1 FROM policies_v2 LIMIT 1"))
+        return result.scalar() is not None
     except Exception:
         await db.rollback()
         return False
