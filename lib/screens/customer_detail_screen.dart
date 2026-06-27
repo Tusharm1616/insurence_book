@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:open_file/open_file.dart';
 
 import '../core/theme.dart';
 import '../providers/customer_detail_provider.dart';
@@ -1161,14 +1162,21 @@ class _DocumentsTabState extends ConsumerState<_DocumentsTab> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
               ),
               const SizedBox(height: 16),
-              ..._documentTypes.map((type) => ListTile(
-                    leading: Icon(_getDocTypeIcon(type), color: _getDocTypeColor(type)),
-                    title: Text(type, style: const TextStyle(fontFamily: 'Poppins')),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _pickAndUpload(type);
-                    },
-                  )),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: _documentTypes.map((type) => ListTile(
+                          leading: Icon(_getDocTypeIcon(type), color: _getDocTypeColor(type)),
+                          title: Text(type, style: const TextStyle(fontFamily: 'Poppins')),
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            _pickAndUpload(type);
+                          },
+                        )).toList(),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -1340,6 +1348,8 @@ class _PolicyPdfActionButtonState extends State<_PolicyPdfActionButton> {
               behavior: SnackBarBehavior.floating,
             ),
           );
+          // Open the file immediately so the user can see it
+          OpenFile.open(path);
         }
       } else {
         await PolicyPdfService.sharePolicyPdf(

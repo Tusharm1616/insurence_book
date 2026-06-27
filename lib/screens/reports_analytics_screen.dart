@@ -241,7 +241,7 @@ class _ReportsAnalyticsScreenState extends ConsumerState<ReportsAnalyticsScreen>
       mainAxisSpacing: 12,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.6,
+      childAspectRatio: 1.2,
       children: [
         _summaryCard('Total Business', _formatIndianAmount(data.totalBusiness), LucideIcons.briefcase, AppColors.primary),
         _summaryCard('Total Income', _formatIndianAmount(data.totalIncome), LucideIcons.wallet, AppColors.info),
@@ -856,7 +856,7 @@ class _ReportsAnalyticsScreenState extends ConsumerState<ReportsAnalyticsScreen>
             mainAxisSpacing: 12,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 1.6,
+            childAspectRatio: 1.2,
             children: List.generate(4, (_) => Container(
               decoration: BoxDecoration(
                 color: Colors.white,
