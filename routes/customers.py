@@ -65,3 +65,25 @@ async def list_customers(
         select(Customer).where(Customer.agent_id == current_user.id)
     )
     return result.scalars().all()
+
+
+@router.delete("/{customer_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_customer(
+    customer_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if current_user.role != UserRole.AGENT:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    result = await db.execute(
+        select(Customer).where(Customer.id == customer_id, Customer.agent_id == current_user.id)
+    )
+    customer = result.scalars().first()
+
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    await db.delete(customer)
+    await db.commit()
+    return None
