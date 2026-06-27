@@ -34,12 +34,6 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
     super.dispose();
   }
 
-  /// Customer name for PDF share text (cached from provider).
-  String get _customerNameForPdf {
-    final detail = ref.read(customerDetailProvider(widget.customerId));
-    return detail.asData?.value.fullName ?? '';
-  }
-
   @override
   Widget build(BuildContext context) {
     final customerDetailAsync = ref.watch(customerDetailProvider(widget.customerId));
@@ -366,7 +360,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
         if (customer.policies.isEmpty)
           _buildEmptyState('No policies added yet', Icons.policy_outlined)
         else
-          ...customer.policies.map((policy) => _buildPolicyMiniCard(context, policy)),
+          ...customer.policies.map((policy) => _buildPolicyMiniCard(context, policy, customer.fullName)),
       ],
     );
   }
@@ -393,7 +387,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
     );
   }
 
-  Widget _buildPolicyMiniCard(BuildContext context, PolicyDetail policy) {
+  Widget _buildPolicyMiniCard(BuildContext context, PolicyDetail policy, String customerName) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 0,
@@ -534,7 +528,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                       tooltip: 'Share PDF',
                       policyId: policy.id,
                       policyNumber: policy.policyNumber,
-                      customerName: _customerNameForPdf,
+                      customerName: customerName,
                       isDownload: false,
                     ),
                   ],
@@ -622,6 +616,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
 
   String _formatDate(String dateString) {
     try {
+      if (dateString.isEmpty) return 'N/A';
       final date = DateTime.parse(dateString);
       return DateFormat('dd MMM yyyy').format(date);
     } catch (e) {
@@ -630,7 +625,16 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
   }
 
   String _formatCurrency(double amount) {
-    return NumberFormat.decimalPattern('en_IN').format(amount);
+    // Avoid intl NumberFormat in case en_IN throws an exception on some Android devices
+    try {
+      String result = amount.toStringAsFixed(0);
+      return result.replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+$)'),
+        (match) => '${match[1]},',
+      );
+    } catch (e) {
+      return amount.toStringAsFixed(0);
+    }
   }
 
   Color _getPolicyTypeColor(String policyType) {
