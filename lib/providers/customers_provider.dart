@@ -127,6 +127,16 @@ class CustomersNotifier extends Notifier<AsyncValue<CustomerListResponse>> {
   Future<void> refreshCustomers() async {
     await fetchCustomers(refresh: true);
   }
+
+  Future<void> deleteCustomer(String id) async {
+    try {
+      await apiService.dio.delete('/api/customers/$id');
+      // After deleting, refresh the list
+      await fetchCustomers(refresh: true);
+    } catch (e) {
+      rethrow;
+    }
+  }
 }
 
 final customersProvider =

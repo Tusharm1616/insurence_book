@@ -258,7 +258,58 @@ class _NewCustomerListScreenState
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          title: const Text('Delete Customer?', style: TextStyle(fontFamily: 'Poppins')),
+                          content: Text('Are you sure you want to completely delete ${customer.fullName}? This action cannot be undone.', style: const TextStyle(fontFamily: 'Poppins')),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+                            ElevatedButton(
+                              onPressed: () async {
+                                Navigator.pop(ctx);
+                                try {
+                                  await ref.read(customersProvider.notifier).deleteCustomer(customer.id);
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                      content: Text('${customer.fullName} deleted successfully.'),
+                                      backgroundColor: Colors.red,
+                                      behavior: SnackBarBehavior.floating,
+                                    ));
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                      content: Text('Failed to delete customer.'),
+                                      backgroundColor: Colors.red,
+                                      behavior: SnackBarBehavior.floating,
+                                    ));
+                                  }
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Delete'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(6.0),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 10),
