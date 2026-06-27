@@ -251,13 +251,15 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                               label: Text(policy.status.isNotEmpty ? policy.status : 'Unknown', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                               backgroundColor: _getPolicyStatusColor(policy.status).withOpacity(0.1),
                               side: BorderSide.none,
-                              labelPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: -4),
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
                             ),
                             Chip(
                               label: Text(_getDaysRemainingText(policy.endDate), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                               backgroundColor: _getDaysRemainingColor(policy.endDate).withOpacity(0.1),
                               side: BorderSide.none,
-                              labelPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: -4),
+                              visualDensity: VisualDensity.compact,
+                              padding: EdgeInsets.zero,
                             ),
                             _PolicyPdfActionButton(
                               icon: Icons.download,
