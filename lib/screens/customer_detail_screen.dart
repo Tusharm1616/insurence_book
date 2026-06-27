@@ -468,7 +468,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'Start: ${_formatDate(policy.startDate)} → End: ${_formatDate(policy.endDate)}',
+              'Start: ${_formatDate(policy.startDate)}  →  End: ${_formatDate(policy.endDate)}',
               style: TextStyle(
                 fontSize: 13,
                 color: AppThemeHelper.textSecondary(context),
@@ -476,8 +476,10 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
               ),
             ),
             const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -486,7 +488,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    policy.status,
+                    policy.status.isNotEmpty ? policy.status : 'Unknown',
                     style: TextStyle(
                       color: _getPolicyStatusColor(policy.status),
                       fontSize: 12,
@@ -511,7 +513,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                     ),
                   ),
                 ),
-                // Share & Download PDF buttons
+                // Buttons at the end
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -522,7 +524,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                       policyNumber: policy.policyNumber,
                       isDownload: true,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 8),
                     _PolicyPdfActionButton(
                       icon: Icons.share,
                       tooltip: 'Share PDF',
@@ -1239,21 +1241,29 @@ class _PolicyPdfActionButtonState extends State<_PolicyPdfActionButton> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 28,
-      height: 28,
-      child: _isLoading
-          ? const Padding(
-              padding: EdgeInsets.all(4),
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-            )
-          : IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              icon: Icon(widget.icon, size: 18, color: AppColors.primary),
-              tooltip: widget.tooltip,
-              onPressed: _onPressed,
-            ),
+    if (_isLoading) {
+      return const SizedBox(
+        width: 32,
+        height: 32,
+        child: Padding(
+          padding: EdgeInsets.all(6.0),
+          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+        ),
+      );
+    }
+    
+    return InkWell(
+      onTap: _onPressed,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(widget.icon, size: 18, color: AppColors.primary),
+      ),
     );
   }
 }
