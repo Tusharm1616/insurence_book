@@ -144,12 +144,21 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
     final policyHolder = _policyHolder?.trim() ?? clientName;
 
     try {
+      String getValidInsuranceType(String rawType) {
+        final lower = rawType.toLowerCase();
+        if (lower.contains('life')) return 'Life';
+        if (lower.contains('motor')) return 'Motor';
+        if (lower.contains('health')) return 'Health';
+        if (lower.contains('travel')) return 'Travel';
+        return 'Other';
+      }
+
       // Build payload for /api/policies-v2/ endpoint
       final payload = <String, dynamic>{
         'customer_id': _selectedCustomerId, // must be provided or backend fails
         'policy_number': _policyNoCtrl.text.trim(),
         'insurance_company': _insuranceCompany ?? 'Unknown',
-        'insurance_type': widget.policyType.split(' - ').first,
+        'insurance_type': getValidInsuranceType(widget.policyType),
         'start_date': _startDate.toIso8601String().split('T').first,
         'end_date': _expiryDate!.toIso8601String().split('T').first,
         'total_amount': double.tryParse(_sumInsuredCtrl.text.replaceAll(',', '')) ?? 0.0,
