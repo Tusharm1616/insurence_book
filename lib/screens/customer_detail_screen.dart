@@ -135,7 +135,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
           children: [
             _buildOverviewTab(context, customer),
             _buildPoliciesTab(context, customer),
-            _DocumentsTab(customerId: widget.customerId),
+            _DocumentsTab(customerId: widget.customerId.toString()),
             _buildTimelineTab(context, customer),
           ],
         ),
@@ -315,28 +315,6 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
           ],
         );
       },
-    );
-  }
-
-  Widget _buildEmptyState(String message, IconData icon) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          children: [
-            Icon(icon, size: 64, color: Colors.grey[300]),
-            const SizedBox(height: 16),
-            Text(
-              message,
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 16,
-                fontFamily: 'Poppins',
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -758,7 +736,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: () {
-              ref.invalidate(customerDetailProvider(widget.customerId));
+              ref.invalidate(customerDetailProvider(widget.customerId.toString()));
             },
             icon: const Icon(Icons.refresh),
             label: const Text('Retry'),
