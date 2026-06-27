@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func, and_, text
+from sqlalchemy import func, and_, text, literal, union_all, case, String
 from typing import Optional, Dict, Any
 from datetime import date
 import uuid
@@ -10,6 +10,7 @@ from database import get_db
 from models.users import User
 from models.customers import Customer
 from models.policies import Policy
+from models.policy_v2 import PolicyV2
 from utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/policies", tags=["Policies"])
@@ -33,119 +34,116 @@ async def get_policies(
         agent_id = current_user.id
         offset = (page - 1) * limit
         
-        # Build base query — use LEFT JOIN so policies without a customer still show
-        query = select(Policy, Customer).outerjoin(
-            Customer, Policy.customer_id == Customer.id
-        ).where(Policy.agent_id == agent_id)
+        # Build union of Policy and PolicyV2
+        stmt1 = select(
+            Policy.id.cast(String).label("id"),
+            Policy.policy_number.label("policy_number"),
+            Policy.policy_type.label("policy_type"),
+            Policy.insurer_name.label("insurer_name"),
+            Policy.plan_name.label("plan_name"),
+            Policy.sum_assured.label("sum_assured"),
+            Policy.premium_amount.label("premium_amount"),
+            Policy.start_date.label("start_date"),
+            Policy.end_date.label("end_date"),
+            Policy.status.label("status"),
+            Policy.agent_id.label("agent_id"),
+            Policy.customer_id.label("customer_id")
+        )
+
+        stmt2 = select(
+            PolicyV2.id.cast(String).label("id"),
+            PolicyV2.policy_number.label("policy_number"),
+            PolicyV2.insurance_type.label("policy_type"),
+            PolicyV2.insurance_company.label("insurer_name"),
+            literal("").label("plan_name"),
+            PolicyV2.total_amount.label("sum_assured"),
+            PolicyV2.final_amount.label("premium_amount"),
+            PolicyV2.start_date.label("start_date"),
+            PolicyV2.end_date.label("end_date"),
+            case((PolicyV2.is_active == True, "active"), else_="inactive").label("status"),
+            PolicyV2.agent_id.label("agent_id"),
+            PolicyV2.customer_id.label("customer_id")
+        )
+
+        union_subq = union_all(stmt1, stmt2).subquery("u")
+        
+        # Build base query
+        query = select(union_subq, Customer).outerjoin(
+            Customer, union_subq.c.customer_id == Customer.id
+        ).where(union_subq.c.agent_id == agent_id)
         
         # Apply filter logic according to specification
         if filter == 'expired':
             query = query.where(
-                Policy.end_date < func.current_date(),
-                Policy.status.in_(['active', 'expired'])
+                union_subq.c.end_date < func.current_date(),
+                union_subq.c.status.in_(['active', 'expired'])
             )
         elif filter == 'expiring_1m':
             query = query.where(
-                Policy.end_date.between(
+                union_subq.c.end_date.between(
                     func.current_date(),
                     func.current_date() + text("INTERVAL '30 days'")
                 ),
-                Policy.status == 'active'
+                union_subq.c.status == 'active'
             )
         elif filter == 'expiring_2m':
             query = query.where(
-                Policy.end_date.between(
+                union_subq.c.end_date.between(
                     func.current_date(),
                     func.current_date() + text("INTERVAL '60 days'")
                 ),
-                Policy.status == 'active'
+                union_subq.c.status == 'active'
             )
         elif filter == 'active':
             query = query.where(
-                Policy.status == 'active',
-                Policy.end_date >= func.current_date()
+                union_subq.c.status == 'active',
+                union_subq.c.end_date >= func.current_date()
             )
-        # 'all' filter - no date filter applied
         
         # Apply customer filter if provided
         if customer_id:
-            query = query.where(Policy.customer_id == int(customer_id))
+            query = query.where(union_subq.c.customer_id == int(customer_id))
         
         if search:
             search_term = f"%{search}%"
             query = query.where(
-                Policy.policy_number.ilike(search_term) |
-                Policy.policy_type.ilike(search_term) |
-                Policy.insurer_name.ilike(search_term) |
+                union_subq.c.policy_number.ilike(search_term) |
+                union_subq.c.policy_type.ilike(search_term) |
+                union_subq.c.insurer_name.ilike(search_term) |
                 Customer.full_name.ilike(search_term)
             )
         
         # Get total count
-        count_query = select(func.count(Policy.id)).where(Policy.agent_id == agent_id)
-        
-        # Apply same filters to count query
-        if filter == 'expired':
-            count_query = count_query.where(
-                Policy.end_date < func.current_date(),
-                Policy.status.in_(['active', 'expired'])
-            )
-        elif filter == 'expiring_1m':
-            count_query = count_query.where(
-                Policy.end_date.between(
-                    func.current_date(),
-                    func.current_date() + text("INTERVAL '30 days'")
-                ),
-                Policy.status == 'active'
-            )
-        elif filter == 'expiring_2m':
-            count_query = count_query.where(
-                Policy.end_date.between(
-                    func.current_date(),
-                    func.current_date() + text("INTERVAL '60 days'")
-                ),
-                Policy.status == 'active'
-            )
-        elif filter == 'active':
-            count_query = count_query.where(
-                Policy.status == 'active',
-                Policy.end_date >= func.current_date()
-            )
-        
-        if customer_id:
-            count_query = count_query.where(Policy.customer_id == int(customer_id))
-        
-        if search:
-            search_term = f"%{search}%"
-            count_query = count_query.where(
-                Policy.policy_number.ilike(search_term) |
-                Policy.policy_type.ilike(search_term) |
-                Policy.insurer_name.ilike(search_term)
-            )
-        
+        count_query = select(func.count()).select_from(query.subquery())
         count_result = await db.execute(count_query)
         total = count_result.scalar() or 0
         
-        # Get paginated data — order by id desc (created_at may not exist yet)
-        query = query.order_by(Policy.id.desc()).offset(offset).limit(limit)
+        # Get paginated data — order by end_date desc or id desc
+        # (Using end_date is safer because IDs are different types (int vs uuid))
+        query = query.order_by(union_subq.c.end_date.desc()).offset(offset).limit(limit)
         result = await db.execute(query)
         
         data = []
-        for policy, customer in result.all():
+        for row in result.all():
+            policy = row[0:12] # The union columns
+            customer = row[12] # The customer object
+            
+            p_id, p_no, p_type, p_ins, p_plan, p_sum, p_prem, p_start, p_end, p_status, p_agent, p_cust = policy
+            
             today = date.today()
-            days_remaining = (policy.end_date - today).days if policy.end_date else 0
+            days_remaining = (p_end - today).days if p_end else 0
             
             policy_data = {
-                "id": str(policy.id),
-                "policy_number": policy.policy_number or "",
-                "policy_type": policy.policy_type or "",
-                "insurer_name": policy.insurer_name,
-                "plan_name": policy.plan_name,
-                "sum_assured": float(policy.sum_assured) if policy.sum_assured else 0.0,
-                "premium_amount": float(policy.premium_amount) if policy.premium_amount else 0.0,
-                "start_date": policy.start_date.isoformat() if policy.start_date else None,
-                "end_date": policy.end_date.isoformat() if policy.end_date else None,
-                "status": policy.status or "active",
-                # customer may be None if policy has no customer_id (LEFT JOIN)
+                "id": str(p_id),
+                "policy_number": p_no or "",
+                "policy_type": p_type or "",
+                "insurer_name": p_ins or "",
+                "plan_name": p_plan or "",
+                "sum_assured": float(p_sum) if p_sum else 0.0,
+                "premium_amount": float(p_prem) if p_prem else 0.0,
+                "start_date": p_start.isoformat() if p_start else None,
+                "end_date": p_end.isoformat() if p_end else None,
+                "status": p_status or "active",
                 "customer": {
                     "id": str(customer.id) if customer else "",
                     "full_name": customer.full_name if customer else "Unknown",
