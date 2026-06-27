@@ -51,12 +51,15 @@ class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
     Future.microtask(() => initialize());
-    return AuthState();
+    return AuthState(isLoading: true);
   }
 
   Future<void> initialize() async {
     final token = await apiService.getToken();
-    if (token == null) return;
+    if (token == null) {
+      state = state.copyWith(isLoading: false);
+      return;
+    }
 
     state = state.copyWith(isLoading: true);
     try {

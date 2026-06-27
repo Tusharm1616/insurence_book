@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
+import '../../main.dart' show pendingSharedPdf;
+import '../pdf_intake_screen.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -32,14 +35,37 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
     // Wait for at least 2.5 seconds total for the splash screen effect
     await Future.delayed(const Duration(milliseconds: 2500));
     
-    if (!mounted) return;
+    // Wait until auth initialization completes
+    while (true) {
+      if (!mounted) return;
+      if (!ref.read(authProvider).isLoading) break;
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
     
     final authState = ref.read(authProvider);
     
-    // In a real implementation, authProvider initialization would read the secure storage
-    // For now, if the user is authenticated, go to dashboard, else login
     if (authState.isAuthenticated) {
-      Navigator.pushReplacementNamed(context, '/dashboard');
+      // If app was opened via share intent with a PDF, go to PDF intake
+      if (pendingSharedPdf != null && pendingSharedPdf!.path.isNotEmpty) {
+        final pdfFile = pendingSharedPdf!;
+        pendingSharedPdf = null; // Clear so it doesn't trigger again
+        final file = File(pdfFile.path);
+        final fileSize = file.existsSync() ? file.lengthSync() : 0;
+        final fileName = pdfFile.path.split('/').last.split('\\').last;
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PdfIntakeScreen(
+              filePath: pdfFile.path,
+              fileName: fileName,
+              fileSize: fileSize,
+            ),
+          ),
+        );
+      } else {
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      }
     } else {
       Navigator.pushReplacementNamed(context, '/login');
     }
