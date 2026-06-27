@@ -16,7 +16,7 @@ VALID_CLAIM_STATUSES = {"No Claim", "Claimed", "Pending"}
 
 class PolicyV2Create(BaseModel):
     customer_id: int
-    policy_number: str = Field(..., min_length=1, max_length=50)
+    policy_number: Optional[str] = Field(default=None, max_length=50)
     insurance_company: Optional[str] = Field(default=None, max_length=100)
     insurance_type: Literal["Life", "Motor", "Health", "Travel", "Other"]
     start_date: Optional[date] = None
@@ -36,10 +36,12 @@ class PolicyV2Create(BaseModel):
 
     @field_validator('policy_number')
     @classmethod
-    def policy_number_not_empty(cls, v: str) -> str:
-        if not v or not v.strip():
-            raise ValueError('policy_number must not be empty')
-        return v.strip()
+    def policy_number_not_empty(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            if not v.strip():
+                return None
+            return v.strip()
+        return v
 
     @field_validator('insurance_type')
     @classmethod

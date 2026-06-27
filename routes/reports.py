@@ -139,20 +139,33 @@ async def get_reports_dashboard(
 
         # ── Leads data ───────────────────────────────────────────────────
         try:
-            leads_query = text("""
-                SELECT
-                    COUNT(*) as leads_total,
-                    COUNT(*) FILTER (WHERE id IN (
-                        SELECT DISTINCT customer_id FROM policies
-                        WHERE agent_id = :agent_id
-                          AND EXTRACT(YEAR FROM COALESCE(issue_date, start_date)) = :year
-                          AND EXTRACT(MONTH FROM COALESCE(issue_date, start_date)) = :month
-                    )) as leads_converted
-                FROM customers
-                WHERE agent_id = :agent_id
-                  AND EXTRACT(YEAR FROM created_at) = :year
-                  AND EXTRACT(MONTH FROM created_at) = :month
-            """)
+            if use_v2:
+                leads_query = text("""
+                    SELECT
+                        COUNT(*) as leads_total,
+                        COUNT(*) FILTER (WHERE id IN (
+                            SELECT DISTINCT customer_id FROM policies_v2
+                            WHERE agent_id = :agent_id
+                              AND EXTRACT(YEAR FROM created_at) = :year
+                              AND EXTRACT(MONTH FROM created_at) = :month
+                        )) as leads_converted
+                    FROM customers
+                    WHERE agent_id = :agent_id
+                """)
+            else:
+                leads_query = text("""
+                    SELECT
+                        COUNT(*) as leads_total,
+                        COUNT(*) FILTER (WHERE id IN (
+                            SELECT DISTINCT customer_id FROM policies
+                            WHERE agent_id = :agent_id
+                              AND EXTRACT(YEAR FROM COALESCE(issue_date, start_date)) = :year
+                              AND EXTRACT(MONTH FROM COALESCE(issue_date, start_date)) = :month
+                        )) as leads_converted
+                    FROM customers
+                    WHERE agent_id = :agent_id
+                """)
+                
             leads_result = await db.execute(leads_query, {
                 "agent_id": agent_id,
                 "year": year,

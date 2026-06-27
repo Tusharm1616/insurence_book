@@ -46,9 +46,15 @@ async def create_policy(
             detail="Customer not found",
         )
 
+    # 1.5 Auto-generate policy number if missing
+    policy_number = policy_in.policy_number
+    if not policy_number:
+        # e.g. LI20260627102030A9
+        policy_number = f"{policy_in.insurance_type[:2].upper()}{datetime.now().strftime('%Y%m%d%H%M%S')}{uuid_mod.uuid4().hex[:4].upper()}"
+
     # 2. Check for duplicate policy_number
     existing = await db.execute(
-        select(PolicyV2).where(PolicyV2.policy_number == policy_in.policy_number)
+        select(PolicyV2).where(PolicyV2.policy_number == policy_number)
     )
     if existing.scalars().first():
         raise HTTPException(
@@ -65,7 +71,7 @@ async def create_policy(
     new_policy = PolicyV2(
         customer_id=policy_in.customer_id,
         agent_id=current_user.id,
-        policy_number=policy_in.policy_number,
+        policy_number=policy_number,
         insurance_company=policy_in.insurance_company,
         insurance_type=policy_in.insurance_type,
         start_date=policy_in.start_date,
