@@ -1,0 +1,179 @@
+  Widget _buildTimelineTab(BuildContext context, CustomerDetail customer) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (customer.createdAt.isNotEmpty)
+            _buildTimelineItem(
+              icon: Icons.person_add,
+              color: AppColors.primary,
+              title: 'Customer Created',
+              subtitle: _formatDate(customer.createdAt),
+            ),
+          ...customer.policies.map((policy) => _buildTimelineItem(
+            icon: Icons.policy,
+            color: _getPolicyTypeColor(policy.policyType),
+            title: 'Policy Added: ${policy.policyNumber}',
+            subtitle: '${policy.insurerName} ΓÇö ${_formatDate(policy.startDate)}',
+          )),
+          if (customer.policies.isEmpty && customer.createdAt.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(40),
+                child: Column(
+                  children: [
+                    Icon(Icons.timeline, size: 64, color: Colors.grey[300]),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No timeline events yet',
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 16,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineItem({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: Theme.of(context).dividerColor),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                        fontFamily: 'Poppins',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPersonalInfoCard(BuildContext context, CustomerDetail customer) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).dividerColor),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Personal Information',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppThemeHelper.textPrimary(context),
+                fontFamily: 'Poppins',
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            _buildInfoRow(context, 'Full Name', customer.fullName),
+            _buildInfoRow(context, 'Phone', customer.phone.isNotEmpty ? customer.phone : 'N/A'),
+            _buildInfoRow(context, 'Email', customer.email.isNotEmpty ? customer.email : 'N/A'),
+            _buildInfoRow(context, 'Date of Birth', customer.dob.isNotEmpty ? _formatDate(customer.dob) : 'N/A'),
+            _buildInfoRow(context, 'Anniversary', customer.anniversaryDate.isNotEmpty ? _formatDate(customer.anniversaryDate) : 'N/A'),
+            _buildInfoRow(context, 'Address', customer.address.isNotEmpty ? customer.address : 'N/A'),
+            _buildInfoRow(context, 'City', customer.city.isNotEmpty ? customer.city : 'N/A'),
+            _buildInfoRow(context, 'State', customer.state.isNotEmpty ? customer.state : 'N/A'),
+            _buildInfoRow(context, 'Pincode', customer.pincode.isNotEmpty ? customer.pincode : 'N/A'),
+            _buildInfoRow(context, 'Ref By', customer.refBy.isNotEmpty ? customer.refBy : 'N/A'),
+
+            const SizedBox(height: 16),
+
+            // Status chip
+            Row(
+              children: [
+                Text(
+                  'Status:',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppThemeHelper.textSecondary(context),
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: customer.status == 'active'
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.grey.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    customer.status == 'active' ? 'Active' : 'Inactive',
+                    style: TextStyle(
+                      color: customer.status == 'active' ? Colors.green : Colors.grey,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+

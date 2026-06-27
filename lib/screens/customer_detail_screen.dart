@@ -13,7 +13,7 @@ import 'document_viewer_screen.dart';
 class CustomerDetailScreen extends ConsumerStatefulWidget {
   const CustomerDetailScreen({super.key, required this.customerId});
 
-  final String customerId;
+  final int customerId;
 
   @override
   ConsumerState<CustomerDetailScreen> createState() => _CustomerDetailScreenState();
@@ -24,17 +24,18 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
   late TabController _tabController;
   late Future<List<PolicyDetail>> _policiesFuture;
 
-  Future<List<PolicyDetail>> fetchPolicies(String customerId) async {
-    final url = '/api/policies/?customer_id=$customerId';
+  Future<List<PolicyDetail>> fetchPolicies(int customerId) async {
+    final url = '/api/customers/$customerId/policies';
     print('--- fetchPolicies called ---');
-    print('Customer ID: $customerId');
+    print('Customer ID (int): $customerId');
     print('Full API URL: $url');
     
     try {
       final response = await apiService.dio.get(url);
+      print('Raw API response status: ${response.statusCode}');
       print('Raw API response body: ${response.data}');
       
-      final data = response.data['data'] as List;
+      final data = response.data as List;
       return data.map((p) => PolicyDetail.fromJson(p)).toList();
     } catch (e) {
       print('Error fetching policies: $e');
@@ -57,7 +58,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    final customerDetailAsync = ref.watch(customerDetailProvider(widget.customerId));
+    final customerDetailAsync = ref.watch(customerDetailProvider(widget.customerId.toString()));
 
     return Scaffold(
       backgroundColor: AppThemeHelper.scaffoldBg(context),
@@ -218,8 +219,30 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
             const SizedBox(height: 16),
             
             // List of policies
+            // List of policies
             if (policies.isEmpty)
-              _buildEmptyState('No policies added yet', Icons.policy_outlined)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40.0),
+                child: Column(
+                  children: [
+                    const Icon(Icons.policy_outlined, size: 64, color: Colors.grey),
+                    const SizedBox(height: 16),
+                    const Text('No policies yet', style: TextStyle(fontSize: 18, color: Colors.grey)),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        await Navigator.pushNamed(context, '/add_policy', arguments: {'customerId': widget.customerId});
+                        setState(() {
+                          _policiesFuture = fetchPolicies(widget.customerId);
+                        });
+                      },
+                      icon: const Icon(Icons.add, color: Colors.white),
+                      label: const Text('Add Policy', style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                    ),
+                  ],
+                ),
+              )
             else
               ...policies.map((policy) {
                 return Card(
