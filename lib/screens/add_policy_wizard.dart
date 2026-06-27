@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import '../utils/lucide_compat.dart';
 import '../models/policy_model.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/life_report_provider.dart';
@@ -62,6 +62,7 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
   final _sumInsuredCtrl = TextEditingController();
   final _tpPremiumCtrl = TextEditingController();
   final _totalPremiumCtrl = TextEditingController();
+  final _commissionPercentCtrl = TextEditingController();
   DateTime _startDate = DateTime.now();
   DateTime? _expiryDate;
   String _paymentFreq = 'Annually';
@@ -102,6 +103,7 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
     _sumInsuredCtrl.dispose();
     _tpPremiumCtrl.dispose();
     _totalPremiumCtrl.dispose();
+    _commissionPercentCtrl.dispose();
     _nomineeCtrl.dispose();
     _relationCtrl.dispose();
     super.dispose();
@@ -142,41 +144,29 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
     final policyHolder = _policyHolder?.trim() ?? clientName;
 
     try {
-      // Build payload directly for /api/policies/ endpoint
+      // Build payload for /api/policies-v2/ endpoint
       final payload = <String, dynamic>{
-        'policy_type': widget.policyType,
-        // Never send null — backend auto-generates if empty string
+        'customer_id': _selectedCustomerId, // must be provided or backend fails
         'policy_number': _policyNoCtrl.text.trim(),
-        'insurer_name': _insuranceCompany ?? 'Unknown',
-        'plan_name': policyHolder.isNotEmpty ? policyHolder : clientName,
-        'sum_assured': double.tryParse(_sumInsuredCtrl.text.replaceAll(',', '')) ?? 0.0,
-        'premium_amount': double.tryParse(_totalPremiumCtrl.text.replaceAll(',', '')) ?? 0.0,
+        'insurance_company': _insuranceCompany ?? 'Unknown',
+        'insurance_type': widget.policyType.split(' - ').first,
         'start_date': _startDate.toIso8601String().split('T').first,
         'end_date': _expiryDate!.toIso8601String().split('T').first,
-        'issue_date': _startDate.toIso8601String().split('T').first,
-        'expiry_date': _expiryDate!.toIso8601String().split('T').first,
-        'status': _status.toLowerCase(),
-        if (_nomineeCtrl.text.trim().isNotEmpty)
-          'nominee_name': _nomineeCtrl.text.trim(),
-        if (_relationCtrl.text.trim().isNotEmpty)
-          'nominee_relation': _relationCtrl.text.trim(),
-        'notes': [
-          if (clientName.isNotEmpty) 'Client: $clientName',
-          if (_referenceCtrl.text.trim().isNotEmpty)
-            'Ref: ${_referenceCtrl.text.trim()}',
-          if (widget.isMotor) ...[
-            'Vehicle: ${_vehicleNoCtrl.text.trim()}',
-            'Make/Model: ${_makeCtrl.text.trim()} ${_modelCtrl.text.trim()}',
-          ],
-        ].join(' | '),
+        'total_amount': double.tryParse(_sumInsuredCtrl.text.replaceAll(',', '')) ?? 0.0,
+        'final_amount': double.tryParse(_totalPremiumCtrl.text.replaceAll(',', '')) ?? 0.0,
+        'payment_mode': _paymentFreq == 'Annually' ? 'Cash' : 'Online', // Simplified map for valid Enum
+        'payment_date': _startDate.toIso8601String().split('T').first,
+        'inspection_status': 'NA',
+        'claim_status': 'No Claim',
+        'commission_percent': double.tryParse(_commissionPercentCtrl.text.replaceAll(',', '')) ?? 0.0,
       };
 
-      // If customer_id is available (prefilled), include it
-      if (_selectedCustomerId != null) {
-        payload['customer_id'] = _selectedCustomerId;
+      // Since the frontend previously allowed creation without a customer_id, but the v2 API requires it
+      if (_selectedCustomerId == null) {
+        throw Exception("Customer must be selected first to create a policy");
       }
 
-      await apiService.dio.post('/api/policies/', data: payload);
+      await apiService.dio.post('/api/policies-v2/', data: payload);
 
       if (!mounted) return;
 
@@ -614,6 +604,15 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
                   controller: _totalPremiumCtrl,
                   keyboardType: TextInputType.number,
                   decoration: _inputDeco(hint: 'Total premium payable', isWhite: true),
+                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                ),
+                const SizedBox(height: 16),
+                const Text('Commission (%) *', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _commissionPercentCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: _inputDeco(hint: 'e.g. 15 for 15%', isWhite: true),
                   validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
               ],
