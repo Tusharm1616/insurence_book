@@ -8,6 +8,11 @@ class AddPolicyTypeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Extract optional arguments if coming from a customer profile
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final int? customerId = args?['customerId'] as int?;
+    final String? customerName = args?['customerName'] as String?;
+
     final types = [
       {'title': 'Health Insurance', 'subtitle': 'Medical expenses for you\nand your family', 'icon': LucideIcons.activity, 'bgColor': Colors.green.shade50, 'color': Colors.green},
       {'title': 'Motor Insurance', 'subtitle': 'Car, bike, commercial\nvehicle and more', 'icon': LucideIcons.car, 'bgColor': Colors.orange.shade50, 'color': Colors.orange},
@@ -77,7 +82,10 @@ class AddPolicyTypeScreen extends StatelessWidget {
                   onTap: () {
                     final title = t['title'] as String;
                     if (title == 'Motor Insurance') {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const MotorSubtypesScreen()));
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => MotorSubtypesScreen(
+                        prefilledCustomerId: customerId,
+                        prefilledCustomerName: customerName,
+                      )));
                     } else {
                       Navigator.push(context, MaterialPageRoute(
                         builder: (_) => AddPolicyWizard(
@@ -85,6 +93,8 @@ class AddPolicyTypeScreen extends StatelessWidget {
                           color: t['color'] as Color,
                           icon: t['icon'] as IconData,
                           isMotor: false,
+                          prefilledCustomerId: customerId,
+                          prefilledCustomerName: customerName,
                         ),
                       ));
                     }

@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api_service.dart';
 
 class LifePolicy {
-  final int id;
+  final String id;
   final String policyNumber;
   final String? insurerName;
   final String status;
@@ -28,7 +28,7 @@ class LifePolicy {
 
   factory LifePolicy.fromJson(Map<String, dynamic> json) {
     return LifePolicy(
-      id: json['policy_id'],
+      id: json['policy_id'].toString(),
       policyNumber: json['policy_number'],
       insurerName: json['insurer_name'],
       status: json['status'],

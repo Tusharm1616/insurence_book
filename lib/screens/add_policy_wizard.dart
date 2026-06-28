@@ -71,11 +71,19 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
   final _relationCtrl = TextEditingController();
 
   // Dynamic Steps count
-  int get _totalSteps => widget.isMotor ? 4 : 3;
+  int get _totalSteps => _stepTitles.length;
 
   List<String> get _stepTitles {
-    if (widget.isMotor) return ['Client', 'Vehicle', 'Policy', 'Review'];
-    return ['Client', 'Policy', 'Review'];
+    final titles = <String>[];
+    if (widget.prefilledCustomerId == null) {
+      titles.add('Client');
+    }
+    if (widget.isMotor) {
+      titles.addAll(['Vehicle', 'Policy', 'Review']);
+    } else {
+      titles.addAll(['Policy', 'Review']);
+    }
+    return titles;
   }
 
   @override
@@ -110,15 +118,16 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
   }
 
   void _next() {
-    if (_currentStep == 0) {
+    final title = _stepTitles[_currentStep];
+    if (title == 'Client') {
       if (_clientFormKey.currentState?.validate() ?? false) {
         setState(() => _currentStep++);
       }
-    } else if (widget.isMotor && _currentStep == 1) {
+    } else if (title == 'Vehicle') {
       if (_vehicleFormKey.currentState?.validate() ?? false) {
         setState(() => _currentStep++);
       }
-    } else if ((widget.isMotor && _currentStep == 2) || (!widget.isMotor && _currentStep == 1)) {
+    } else if (title == 'Policy') {
       if (_expiryDate == null) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select an expiry date'), backgroundColor: Colors.red));
         return;
@@ -126,7 +135,7 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
       if (_policyFormKey.currentState?.validate() ?? false) {
         setState(() => _currentStep++);
       }
-    } else {
+    } else if (title == 'Review') {
       _save();
     }
   }
@@ -347,19 +356,12 @@ class _AddPolicyWizardState extends ConsumerState<AddPolicyWizard> {
   }
 
   Widget _buildCurrentStep() {
-    // 0: Client
-    // 1: Vehicle (if motor) OR Policy (if not motor)
-    // 2: Policy (if motor) OR Review (if not motor)
-    // 3: Review (if motor)
-
-    if (_currentStep == 0) return _buildClientStep();
-    if (widget.isMotor) {
-      if (_currentStep == 1) return _buildVehicleStep();
-      if (_currentStep == 2) return _buildPolicyStep();
-    } else {
-      if (_currentStep == 1) return _buildPolicyStep();
-    }
-    return _buildReviewStep();
+    final title = _stepTitles[_currentStep];
+    if (title == 'Client') return _buildClientStep();
+    if (title == 'Vehicle') return _buildVehicleStep();
+    if (title == 'Policy') return _buildPolicyStep();
+    if (title == 'Review') return _buildReviewStep();
+    return const SizedBox();
   }
 
   Widget _buildHeader(String title, String subtitle) {

@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/api_service.dart';
 
 class ExpiringPolicy {
-  final int id;
+  final String id;
   final String policyNumber;
   final String policyType;
   final String? insurerName;
@@ -26,7 +26,7 @@ class ExpiringPolicy {
 
   factory ExpiringPolicy.fromJson(Map<String, dynamic> json) {
     return ExpiringPolicy(
-      id: json['policy_id'],
+      id: json['policy_id'].toString(),
       policyNumber: json['policy_number'],
       policyType: json['policy_type'],
       insurerName: json['insurer_name'],

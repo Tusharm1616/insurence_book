@@ -173,7 +173,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
               ),
               ElevatedButton.icon(
                 onPressed: () async {
-                  await Navigator.pushNamed(context, '/add_policy', arguments: {'customerId': widget.customerId});
+                  await Navigator.pushNamed(context, '/add_policy', arguments: {'customerId': widget.customerId, 'customerName': customer.fullName});
                   // Refresh the whole customer detail provider so we get the new policies
                   ref.invalidate(customerDetailProvider(widget.customerId.toString()));
                 },
@@ -199,7 +199,7 @@ class _CustomerDetailScreenState extends ConsumerState<CustomerDetailScreen>
                     const SizedBox(height: 16),
                     ElevatedButton.icon(
                       onPressed: () async {
-                        await Navigator.pushNamed(context, '/add_policy', arguments: {'customerId': widget.customerId});
+                        await Navigator.pushNamed(context, '/add_policy', arguments: {'customerId': widget.customerId, 'customerName': customer.fullName});
                         ref.invalidate(customerDetailProvider(widget.customerId.toString()));
                       },
                       icon: const Icon(Icons.add, color: Colors.white),
