@@ -200,7 +200,7 @@ class _InsureBookAppState extends ConsumerState<InsureBookApp> {
           final args = settings.arguments as Map<String, dynamic>? ?? {};
           return MaterialPageRoute(
             builder: (_) => EditCustomerScreen(
-              customerId: args['customerId'] as String? ?? '',
+              customerId: args['customerId']?.toString() ?? '',
             ),
           );
         }
