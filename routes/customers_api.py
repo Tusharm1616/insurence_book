@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func
+from sqlalchemy import func, delete, update
 from typing import Optional, Dict, Any
 from datetime import date as _date
 
@@ -10,6 +10,11 @@ from models.users import User
 from models.customers import Customer
 from models.policies import Policy
 from models.policy_v2 import PolicyV2
+from models.customer_document import CustomerDocument
+from models.motor_insurance import MotorInsurancePolicy, MotorInsuranceQuote
+from models.vehicle_documents import VehicleDocument
+from models.reminders import Reminder
+from models.leads import Lead
 from utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/customers", tags=["Customers"])
@@ -405,6 +410,16 @@ async def delete_customer(
 
         if not customer:
             raise HTTPException(status_code=404, detail="Customer not found")
+
+        # Explicitly delete/update all related records
+        await db.execute(delete(Policy).where(Policy.customer_id == customer_id))
+        await db.execute(delete(PolicyV2).where(PolicyV2.customer_id == customer_id))
+        await db.execute(delete(CustomerDocument).where(CustomerDocument.customer_id == customer_id))
+        await db.execute(delete(VehicleDocument).where(VehicleDocument.customer_id == customer_id))
+        await db.execute(delete(MotorInsurancePolicy).where(MotorInsurancePolicy.customer_id == customer_id))
+        await db.execute(delete(MotorInsuranceQuote).where(MotorInsuranceQuote.customer_id == customer_id))
+        await db.execute(delete(Reminder).where(Reminder.customer_id == customer_id))
+        await db.execute(update(Lead).where(Lead.converted_customer_id == customer_id).values(converted_customer_id=None))
 
         await db.delete(customer)
         await db.commit()
