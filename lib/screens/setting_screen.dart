@@ -53,8 +53,6 @@ class _SettingScreenState extends ConsumerState<SettingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = ref.watch(themeProvider) == ThemeMode.dark;
-
     final authState = ref.watch(authProvider);
     final user = authState.user;
 
@@ -136,14 +134,6 @@ class _SettingScreenState extends ConsumerState<SettingScreen> {
               subtitle: 'Enable or disable alerts',
               value: _notificationsEnabled,
               onChanged: (val) => setState(() => _notificationsEnabled = val),
-            ),
-            _toggleTile(
-              icon: LucideIcons.moon,
-              color: Colors.indigo,
-              title: 'Dark Mode',
-              subtitle: 'Switch to dark theme',
-              value: isDarkMode,
-              onChanged: (val) => ref.read(themeProvider.notifier).toggleTheme(val),
             ),
             const SizedBox(height: 16),
 

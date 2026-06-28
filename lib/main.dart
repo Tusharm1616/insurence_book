@@ -132,13 +132,10 @@ class _InsureBookAppState extends ConsumerState<InsureBookApp> {
 
   @override
   Widget build(BuildContext context) {
-    final themeMode = ref.watch(themeProvider);
     return MaterialApp(
       title: 'InsureBook',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: themeMode,
       navigatorKey: navigatorKey,
       initialRoute: '/',
       routes: {
