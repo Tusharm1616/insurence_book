@@ -4,6 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../utils/lucide_compat.dart';
 import '../core/theme.dart';
 import '../providers/customer_provider.dart';
+import '../providers/dashboard_provider.dart';
+import '../providers/policies_provider.dart';
+import '../providers/expiring_policies_provider.dart';
+import '../providers/expired_policies_provider.dart';
+import '../providers/life_policy_list_provider.dart';
+import '../providers/policy_v2_provider.dart';
 import '../models/customer_model.dart';
 import 'customer_policy_screen.dart';
 
@@ -113,6 +119,12 @@ class _CustomerListScreenState extends ConsumerState<CustomerListScreen> {
               Navigator.pop(ctx);
               try {
                 await ref.read(customerProvider.notifier).deleteCustomer(customer.id);
+                ref.invalidate(dashboardStatsProvider);
+                ref.invalidate(policiesProvider);
+                ref.invalidate(expiringPoliciesProvider);
+                ref.invalidate(expiredPoliciesListProvider);
+                ref.invalidate(lifePoliciesListProvider);
+                ref.invalidate(policyV2Provider);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text('${customer.fullName} deleted successfully.'),
