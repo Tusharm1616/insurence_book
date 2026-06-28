@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Union
 from datetime import date
 
 class ExpiringCountResponse(BaseModel):
@@ -7,7 +7,7 @@ class ExpiringCountResponse(BaseModel):
     filter_days: int
 
 class ExpiringPolicyItem(BaseModel):
-    policy_id: int
+    policy_id: Union[int, str]
     policy_number: str
     policy_type: str
     insurer_name: Optional[str] = None
@@ -27,7 +27,7 @@ class ExpiringListResponse(BaseModel):
     limit: int
 
 class ExpiredPolicyItem(BaseModel):
-    policy_id: int
+    policy_id: Union[int, str]
     policy_number: str
     policy_type: str
     insurer_name: Optional[str] = None

@@ -50,7 +50,7 @@ def _format_currency(amount) -> str:
         return "₹0"
 
 
-def _build_pdf(policy: Policy, customer: Customer, agent: User) -> io.BytesIO:
+def _build_pdf(policy, customer: Customer, agent: User) -> io.BytesIO:
     """Build a professional PDF summary of the policy."""
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -160,19 +160,28 @@ def _build_pdf(policy: Policy, customer: Customer, agent: User) -> io.BytesIO:
 
     # ── Policy Section ────────────────────────────────────────────────────
     elements.append(Paragraph("Policy Details", section_title_style))
+    
+    policy_type = getattr(policy, "policy_type", None) or getattr(policy, "insurance_type", "N/A")
+    insurer_name = getattr(policy, "insurer_name", None) or getattr(policy, "insurance_company", "N/A")
+    
     policy_data = [
         ["Policy Number", policy.policy_number or "N/A"],
-        ["Insurance Type", policy.policy_type or "N/A"],
-        ["Company", policy.insurer_name or "N/A"],
-        ["Plan Name", policy.plan_name or "N/A"],
-        ["Start Date", _format_date(policy.issue_date or policy.start_date)],
-        ["End Date", _format_date(policy.expiry_date or policy.end_date)],
-        ["Status", (policy.status or "active").capitalize()],
+        ["Insurance Type", policy_type],
+        ["Company", insurer_name],
+        ["Plan Name", getattr(policy, "plan_name", "N/A") or "N/A"],
+        ["Start Date", _format_date(getattr(policy, "issue_date", None) or getattr(policy, "start_date", None))],
+        ["End Date", _format_date(getattr(policy, "expiry_date", None) or getattr(policy, "end_date", None))],
+        ["Status", (getattr(policy, "status", None) or ("active" if getattr(policy, "is_active", True) else "inactive")).capitalize()],
     ]
-    if policy.nominee_name:
-        policy_data.append(["Nominee", f"{policy.nominee_name} ({policy.nominee_relation or 'N/A'})"])
-    if policy.vehicle_reg_no:
-        policy_data.append(["Vehicle Reg No", policy.vehicle_reg_no])
+    
+    nominee_name = getattr(policy, "nominee_name", None)
+    nominee_relation = getattr(policy, "nominee_relation", "N/A")
+    if nominee_name:
+        policy_data.append(["Nominee", f"{nominee_name} ({nominee_relation})"])
+        
+    vehicle_reg_no = getattr(policy, "vehicle_reg_no", None)
+    if vehicle_reg_no:
+        policy_data.append(["Vehicle Reg No", vehicle_reg_no])
 
     pol_table = Table(policy_data, colWidths=[40 * mm, 130 * mm])
     pol_table.setStyle(TableStyle([
@@ -193,15 +202,23 @@ def _build_pdf(policy: Policy, customer: Customer, agent: User) -> io.BytesIO:
 
     # ── Financial Section ─────────────────────────────────────────────────
     elements.append(Paragraph("Financial Details", section_title_style))
+    
+    sum_assured = getattr(policy, "sum_assured", None) or getattr(policy, "total_amount", 0)
+    premium_amount = getattr(policy, "premium_amount", None) or getattr(policy, "final_amount", 0)
+    
     fin_data = [
-        ["Sum Assured", _format_currency(policy.sum_assured)],
-        ["Premium Amount", _format_currency(policy.premium_amount)],
-        ["NCB", f"{policy.ncb_percent or 0}%"],
+        ["Sum Assured", _format_currency(sum_assured)],
+        ["Premium Amount", _format_currency(premium_amount)],
+        ["NCB", f"{getattr(policy, 'ncb_percent', 0) or 0}%"],
     ]
-    if policy.premium_due_date:
-        fin_data.append(["Premium Due Date", _format_date(policy.premium_due_date)])
-    if policy.maturity_date:
-        fin_data.append(["Maturity Date", _format_date(policy.maturity_date)])
+    
+    premium_due_date = getattr(policy, "premium_due_date", None)
+    if premium_due_date:
+        fin_data.append(["Premium Due Date", _format_date(premium_due_date)])
+        
+    maturity_date = getattr(policy, "maturity_date", None)
+    if maturity_date:
+        fin_data.append(["Maturity Date", _format_date(maturity_date)])
 
     fin_table = Table(fin_data, colWidths=[40 * mm, 130 * mm])
     fin_table.setStyle(TableStyle([
@@ -232,20 +249,42 @@ def _build_pdf(policy: Policy, customer: Customer, agent: User) -> io.BytesIO:
 
 @router.get("/{policy_id}/generate-pdf")
 async def generate_policy_pdf(
-    policy_id: int,
+    policy_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Generate a formatted PDF summary of a policy and return as file download."""
+    is_uuid = False
+    try:
+        import uuid
+        uuid.UUID(policy_id)
+        is_uuid = True
+    except ValueError:
+        pass
 
-    # Fetch policy
-    result = await db.execute(
-        select(Policy).where(
-            Policy.id == policy_id,
-            Policy.agent_id == current_user.id,
+    policy = None
+    if is_uuid:
+        from models.policy_v2 import PolicyV2
+        result = await db.execute(
+            select(PolicyV2).where(
+                PolicyV2.id == policy_id,
+                PolicyV2.agent_id == current_user.id,
+            )
         )
-    )
-    policy = result.scalars().first()
+        policy = result.scalars().first()
+    else:
+        try:
+            p_id_int = int(policy_id)
+            result = await db.execute(
+                select(Policy).where(
+                    Policy.id == p_id_int,
+                    Policy.agent_id == current_user.id,
+                )
+            )
+            policy = result.scalars().first()
+        except ValueError:
+            pass
+
     if not policy:
         raise HTTPException(status_code=404, detail="Policy not found")
 
@@ -269,3 +308,4 @@ async def generate_policy_pdf(
             "Content-Disposition": f'attachment; filename="{filename}"',
         },
     )
+

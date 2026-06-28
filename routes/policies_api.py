@@ -464,13 +464,29 @@ async def delete_policy(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    is_uuid = False
     try:
-        policy = (await db.execute(
-            select(Policy).where(
-                Policy.id == int(policy_id),
-                Policy.agent_id == current_user.id
-            )
-        )).scalars().first()
+        import uuid
+        uuid.UUID(policy_id)
+        is_uuid = True
+    except ValueError:
+        pass
+
+    try:
+        if is_uuid:
+            policy = (await db.execute(
+                select(PolicyV2).where(
+                    PolicyV2.id == policy_id,
+                    PolicyV2.agent_id == current_user.id
+                )
+            )).scalars().first()
+        else:
+            policy = (await db.execute(
+                select(Policy).where(
+                    Policy.id == int(policy_id),
+                    Policy.agent_id == current_user.id
+                )
+            )).scalars().first()
 
         if not policy:
             raise HTTPException(status_code=404, detail="Policy not found")
